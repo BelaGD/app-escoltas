@@ -81,7 +81,7 @@ export function Shell() {
         <SheetContent />
       </BottomSheet>
 
-      <Toast text={app.toast} />
+      <Toast text={app.toast} onDeshacer={app.toastUndo ? app.deshacerToast : null} />
     </View>
   );
 }

@@ -70,6 +70,12 @@ export function Ficha() {
       {app.enVacaciones && (
         <Btn label="Marcar como disponible (fin de vacaciones)" variant="primary" block onPress={app.finalizarVacaciones} style={{ marginBottom: 10 }} />
       )}
+      {app.enBaja && (
+        <Btn label="Reincorporar (fin de baja)" variant="primary" block onPress={app.volverDeBaja} style={{ marginBottom: 10 }} />
+      )}
+      {!app.enVacaciones && !app.enBaja && (
+        <Btn label="Dar de baja (enfermedad)" variant="secondary" block onPress={app.marcarDeBaja} style={{ marginBottom: 10 }} />
+      )}
       <Btn
         label="Eliminar escolta"
         variant="secondary"

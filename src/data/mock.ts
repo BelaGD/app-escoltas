@@ -10,7 +10,7 @@ export const AC = color.accent700;
 
 export const HOY = Date.UTC(2026, 8, 12);
 
-export type EstadoEscolta = 'servicio' | 'disponible' | 'descanso' | 'vacaciones';
+export type EstadoEscolta = 'servicio' | 'disponible' | 'descanso' | 'vacaciones' | 'baja';
 
 export interface Cert {
   id: string;
@@ -62,6 +62,7 @@ export const EST: Record<EstadoEscolta, { txt: string; tag: 'accent' | 'outline'
   disponible: { txt: 'DISPONIBLE', tag: 'outline' },
   descanso: { txt: 'DESCANSO', tag: 'neutral' },
   vacaciones: { txt: 'VACACIONES', tag: 'neutral' },
+  baja: { txt: 'DE BAJA', tag: 'neutral' },
 };
 
 export const SEMANA = [
@@ -87,14 +88,15 @@ export interface Protegido {
   inicio: string;
   rutina: string;
   estado: EstadoProtegido;
+  telefono: string;
 }
 
 export const PROTEGIDOS_INICIAL: Protegido[] = [
-  { id: 'p1', nombre: 'Alberto Ferrán', rol: 'Principal · Grupo Ferrán', nivel: 'NIVEL 3', titular: 'Marta Ríos', tit: 'MR', suplente: 'Iván Colmenar', inicio: '06:00', rutina: 'Presentación 06:00 · residencia, oficina y agenda', estado: 'con' },
-  { id: 'p2', nombre: 'Carmen Rivas', rol: 'Cónyuge', nivel: 'NIVEL 2', titular: 'Elena Bustos', tit: 'EB', suplente: 'Nuria Palau', inicio: '08:30', rutina: 'Presentación 08:30 · fundación y agenda social', estado: 'con' },
-  { id: 'p3', nombre: 'Elisa Ferrán', rol: 'Hija · 14 años', nivel: 'NIVEL 2', titular: 'Lucía Vega', tit: 'LV', suplente: 'Paula Serna', inicio: '07:15', rutina: 'Presentación 07:15 · colegio y extraescolares', estado: 'relevo' },
-  { id: 'p4', nombre: 'Tomás Ferrán', rol: 'Hijo · 9 años', nivel: 'NIVEL 1', titular: 'Jon Aramburu', tit: 'JA', suplente: 'Damián Sosa', inicio: '07:15', rutina: 'Presentación 07:15 · colegio y domicilio', estado: 'con' },
-  { id: 'p5', nombre: 'Rosa Ferrán', rol: 'Madre · residencia', nivel: 'NIVEL 1', titular: 'Rubén Cid', tit: 'RC', suplente: 'Sara Quintana', inicio: '09:00', rutina: 'Presentación 09:00 · domicilio y clínica', estado: 'sin' },
+  { id: 'p1', nombre: 'Alberto Ferrán', rol: 'Principal · Grupo Ferrán', nivel: 'NIVEL 3', titular: 'Marta Ríos', tit: 'MR', suplente: 'Iván Colmenar', inicio: '06:00', rutina: 'Presentación 06:00 · residencia, oficina y agenda', estado: 'con', telefono: '+34 611 220 034' },
+  { id: 'p2', nombre: 'Carmen Rivas', rol: 'Cónyuge', nivel: 'NIVEL 2', titular: 'Elena Bustos', tit: 'EB', suplente: 'Nuria Palau', inicio: '08:30', rutina: 'Presentación 08:30 · fundación y agenda social', estado: 'con', telefono: '+34 611 220 035' },
+  { id: 'p3', nombre: 'Elisa Ferrán', rol: 'Hija · 14 años', nivel: 'NIVEL 2', titular: 'Lucía Vega', tit: 'LV', suplente: 'Paula Serna', inicio: '07:15', rutina: 'Presentación 07:15 · colegio y extraescolares', estado: 'relevo', telefono: '+34 611 220 036' },
+  { id: 'p4', nombre: 'Tomás Ferrán', rol: 'Hijo · 9 años', nivel: 'NIVEL 1', titular: 'Jon Aramburu', tit: 'JA', suplente: 'Damián Sosa', inicio: '07:15', rutina: 'Presentación 07:15 · colegio y domicilio', estado: 'con', telefono: '+34 611 220 037' },
+  { id: 'p5', nombre: 'Rosa Ferrán', rol: 'Madre · residencia', nivel: 'NIVEL 1', titular: 'Rubén Cid', tit: 'RC', suplente: 'Sara Quintana', inicio: '09:00', rutina: 'Presentación 09:00 · domicilio y clínica', estado: 'sin', telefono: '+34 611 220 038' },
 ];
 
 export const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];

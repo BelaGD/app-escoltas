@@ -6,6 +6,7 @@ import {
 } from '../data/mock';
 import { color } from '../theme/theme';
 import { diaCiclo, enJornada } from './ciclo';
+import { dmyToLocalDate } from './date';
 
 export type TagKind = 'accent' | 'outline' | 'neutral';
 
@@ -20,7 +21,7 @@ const corto = (nombre: string) => {
  * touching raw state, mirroring the {{ bindings }} of the original template.
  */
 export function useApp() {
-  const { state: st, setState, flash } = useStore();
+  const { state: st, setState, flash, toastUndo, deshacerToast } = useStore();
 
   const asigDe = (p: Protegido) => ({
     titular: st.asig[p.id]?.titular || p.titular,
@@ -30,6 +31,7 @@ export function useApp() {
   const protDe = (nombre: string) => st.protegidos.find(p => asigDe(p).titular === nombre);
   const suplenteDe = (nombre: string) => st.protegidos.find(p => asigDe(p).suplente === nombre);
   const estadoDe = (e: Escolta) => e.estado === 'vacaciones' ? 'vacaciones'
+    : e.estado === 'baja' ? 'baja'
     : !enJornada(HOY, e.nombre) ? 'descanso'
     : protDe(e.nombre) ? 'servicio' : 'disponible';
 
@@ -53,9 +55,10 @@ export function useApp() {
 
   const abrirDetalle = (dia: number, s: ServicioRaw) => {
     const extraMatch = st.extra.find(e => e.dia === dia && e.desde === s[0] && e.protegido === s[2]);
+    const protegido = st.protegidos.find(p => p.nombre === s[2]);
     setState({
       sheet: 'detalle',
-      detalle: { dia, desde: s[0], hasta: s[1], protegido: s[2], tipo: s[3], dotacion: s[4] || 'Sin dotación asignada', extraId: extraMatch?.id },
+      detalle: { dia, desde: s[0], hasta: s[1], protegido: s[2], tipo: s[3], dotacion: s[4] || 'Sin dotación asignada', extraId: extraMatch?.id, telefono: protegido?.telefono },
     });
   };
 
@@ -111,11 +114,14 @@ export function useApp() {
   const filtros = ['Todos', 'Disponibles', 'En servicio', 'Fuera'].map(f => ({
     label: f, on: st.filtro === f, onTap: () => setState({ filtro: f }),
   }));
-  const equipoFiltrado = st.equipo.filter(e =>
-    st.filtro === 'Todos' ? true
-    : st.filtro === 'Disponibles' ? estadoDe(e) === 'disponible'
-    : st.filtro === 'En servicio' ? estadoDe(e) === 'servicio'
-    : estadoDe(e) === 'descanso' || estadoDe(e) === 'vacaciones');
+  const equipoFiltrado = st.equipo.filter(e => {
+    const pasaFiltro = st.filtro === 'Todos' ? true
+      : st.filtro === 'Disponibles' ? estadoDe(e) === 'disponible'
+      : st.filtro === 'En servicio' ? estadoDe(e) === 'servicio'
+      : estadoDe(e) === 'descanso' || estadoDe(e) === 'vacaciones' || estadoDe(e) === 'baja';
+    const pasaBusqueda = !st.buscarEquipo.trim() || e.nombre.toLowerCase().includes(st.buscarEquipo.trim().toLowerCase());
+    return pasaFiltro && pasaBusqueda;
+  });
 
   const fichaEsc = st.equipo.find(e => e.id === st.fichaId) || st.equipo[0];
 
@@ -138,19 +144,20 @@ export function useApp() {
     const esHoy = f === HOY;
     const total = st.equipo.length;
     const vac = st.equipo.filter(e => e.estado === 'vacaciones');
-    const activos = st.equipo.filter(e => e.estado !== 'vacaciones');
+    const baja = st.equipo.filter(e => e.estado === 'baja');
+    const activos = st.equipo.filter(e => e.estado !== 'vacaciones' && e.estado !== 'baja');
     const jorn = activos.filter(e => enJornada(f, e.nombre));
     const conProt = jorn.filter(e => protDe(e.nombre));
     const libres = jorn.filter(e => !protDe(e.nombre));
     const libranza = activos.filter(e => !enJornada(f, e.nombre));
-    return { esHoy, total, vac, conProt, libres, libranza };
+    return { esHoy, total, vac, baja, conProt, libres, libranza };
   };
 
   const dotacion = (() => {
     const p = (st.fechaDot || '').split('-').map(Number);
     const valida = p.length === 3 && p.every(n => Number.isFinite(n) && n > 0) && p[0] >= 2026 && p[0] <= 2030 && p[1] <= 12 && p[2] <= 31;
     const f = valida ? Date.UTC(p[0], p[1] - 1, p[2]) : HOY;
-    const { esHoy, total, vac, conProt, libres, libranza } = dotacionPara(f);
+    const { esHoy, total, vac, baja, conProt, libres, libranza } = dotacionPara(f);
     const pct = (n: number) => Math.round((n / total) * 100) + '%';
     const dd = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][new Date(f).getUTCDay()];
     const rango = valida ? '' : ' (rango 2026–2030)';
@@ -164,6 +171,7 @@ export function useApp() {
         { k: 'Libres para refuerzo', n: libres.length, w: pct(libres.length), color: color.accent700, barra: color.accent400, nota: 'En jornada, sin protegido fijo' },
         { k: 'De libranza (ciclo 14/7)', n: libranza.length, w: pct(libranza.length), color: color.neutral800, barra: color.neutral400, nota: 'Fuera de ciclo' },
         { k: 'De vacaciones', n: vac.length, w: pct(vac.length), color: color.neutral800, barra: color.neutral300, nota: vac.map(v => v.nombre.split(' ')[0]).join(', ') || 'Nadie' },
+        { k: 'De baja', n: baja.length, w: pct(baja.length), color: WARN, barra: WARN, nota: baja.map(v => v.nombre.split(' ')[0]).join(', ') || 'Nadie' },
       ],
       libresNombres: (libres.length ? 'Disponibles: ' + libres.map(e => e.nombre).join(' · ') : 'Ningún escolta libre para refuerzo ese día') + rango,
     };
@@ -227,22 +235,23 @@ export function useApp() {
     const asignado = protDe(e.nombre) || suplenteDe(e.nombre);
     if (asignado) { flash('No se puede eliminar: es titular o suplente de ' + asignado.nombre); return; }
     setState(s => ({ equipo: s.equipo.filter(x => x.id !== id), tab: 'equipo', fichaId: null }));
-    flash('Escolta eliminado · ' + e.nombre);
+    flash('Escolta eliminado · ' + e.nombre, () => setState(s => ({ equipo: s.equipo.concat([e]) })));
   };
 
   const crearProtegido = () => {
     const n = st.nuevoProtegido;
     if (!n.nombre.trim() || !n.titular) { flash('Falta el nombre o el titular'); return; }
+    if (!n.suplente) { flash('Elige un suplente — no debería quedar sin respaldo'); return; }
     const id = 'p' + Date.now();
     setState(s => ({
       sheet: null,
-      nuevoProtegido: { nombre: '', rol: '', nivel: 'NIVEL 1', titular: '', suplente: '', inicio: '08:00', rutina: '' },
+      nuevoProtegido: { nombre: '', rol: '', nivel: 'NIVEL 1', titular: '', suplente: '', inicio: '08:00', rutina: '', telefono: '' },
       protegidos: s.protegidos.concat([{
         id, nombre: n.nombre.trim(), rol: n.rol.trim() || 'Protegido', nivel: n.nivel,
-        titular: n.titular, tit: iniDe(n.titular), suplente: n.suplente || n.titular,
+        titular: n.titular, tit: iniDe(n.titular), suplente: n.suplente,
         inicio: n.inicio || '08:00',
         rutina: n.rutina.trim() || ('Presentación ' + (n.inicio || '08:00')),
-        estado: n.suplente ? 'con' : 'relevo',
+        estado: 'con', telefono: n.telefono.trim(),
       }]),
     }));
     flash('Protegido añadido · ' + n.nombre.trim());
@@ -251,6 +260,7 @@ export function useApp() {
     const p = st.protegidos.find(x => x.id === id);
     if (!p) return;
     if (st.protegidos.length <= 1) { flash('Debe quedar al menos un protegido'); return; }
+    const asigPrevia = st.asig[id];
     setState(s => {
       const { [id]: _quitado, ...asigResto } = s.asig;
       return {
@@ -259,12 +269,15 @@ export function useApp() {
         asigProt: s.asigProt === id ? s.protegidos.filter(x => x.id !== id)[0].id : s.asigProt,
       };
     });
-    flash('Protegido eliminado · ' + p.nombre);
+    flash('Protegido eliminado · ' + p.nombre, () => setState(s => ({
+      protegidos: s.protegidos.concat([p]),
+      asig: asigPrevia ? { ...s.asig, [id]: asigPrevia } : s.asig,
+    })));
   };
 
   const abrirEditarProtegido = (p: Protegido) => setState({
     sheet: 'editarProtegido',
-    editProtegido: { id: p.id, nombre: p.nombre, rol: p.rol, nivel: p.nivel, rutina: p.rutina },
+    editProtegido: { id: p.id, nombre: p.nombre, rol: p.rol, nivel: p.nivel, rutina: p.rutina, telefono: p.telefono },
   });
   const guardarEdicionProtegido = () => {
     const ep = st.editProtegido;
@@ -272,7 +285,7 @@ export function useApp() {
     setState(s => ({
       sheet: null,
       protegidos: s.protegidos.map(p => p.id === ep.id
-        ? { ...p, nombre: ep.nombre.trim(), rol: ep.rol.trim(), nivel: ep.nivel, rutina: ep.rutina.trim() }
+        ? { ...p, nombre: ep.nombre.trim(), rol: ep.rol.trim(), nivel: ep.nivel, rutina: ep.rutina.trim(), telefono: ep.telefono.trim() }
         : p),
     }));
     flash('Datos actualizados · ' + ep.nombre.trim());
@@ -293,10 +306,13 @@ export function useApp() {
   };
   const eliminarHabilitacion = (certId: string) => {
     const escoltaId = fichaEsc.id;
+    const cert = fichaEsc.certs.find(c => c.id === certId);
     setState(s => ({
       equipo: s.equipo.map(e => e.id === escoltaId ? { ...e, certs: e.certs.filter(c => c.id !== certId) } : e),
     }));
-    flash('Habilitación eliminada');
+    flash('Habilitación eliminada', cert ? () => setState(s => ({
+      equipo: s.equipo.map(e => e.id === escoltaId ? { ...e, certs: e.certs.concat([cert]) } : e),
+    })) : undefined);
   };
 
   return {
@@ -418,6 +434,8 @@ export function useApp() {
 
     // ---- Equipo / Ficha ----
     filtros,
+    buscarEquipo: st.buscarEquipo,
+    setBuscarEquipo: (v: string) => setState({ buscarEquipo: v }),
     equipo: equipoFiltrado.map(e => ({
       id: e.id, ini: e.ini, nombre: e.nombre,
       nota: protDe(e.nombre) ? 'Titular de ' + protDe(e.nombre)!.nombre
@@ -467,6 +485,30 @@ export function useApp() {
       setState(s => ({ equipo: s.equipo.map(e => e.id === id ? { ...e, estado: 'disponible' } : e) }));
       flash(fichaEsc.nombre + ' vuelve de vacaciones');
     },
+    enBaja: fichaEsc.estado === 'baja',
+    marcarDeBaja: () => {
+      const id = fichaEsc.id;
+      const nombre = fichaEsc.nombre;
+      const titularDe = protDe(nombre);
+      const suplenteDeAlguien = suplenteDe(nombre);
+      const notifId = 'n' + Date.now();
+      const textoAviso = titularDe
+        ? nombre + ' se dio de baja — es titular de ' + titularDe.nombre + ', necesita reemplazo ya.'
+        : suplenteDeAlguien
+          ? nombre + ' se dio de baja — es suplente de ' + suplenteDeAlguien.nombre + '.'
+          : nombre + ' se dio de baja.';
+      setState(s => ({
+        equipo: s.equipo.map(e => e.id === id ? { ...e, estado: 'baja' } : e),
+        notifs: [{ id: notifId, tipo: 'Cobertura', texto: textoAviso, hora: 'ahora', leida: false, urgente: !!titularDe }].concat(s.notifs),
+        ...(titularDe ? { tab: 'prot' as const, sheet: 'asignacion' as const, asigProt: titularDe.id } : {}),
+      }));
+      flash(titularDe ? 'Baja registrada · elige reemplazo para ' + titularDe.nombre : 'Baja registrada · ' + nombre);
+    },
+    volverDeBaja: () => {
+      const id = fichaEsc.id;
+      setState(s => ({ equipo: s.equipo.map(e => e.id === id ? { ...e, estado: 'disponible' } : e) }));
+      flash(fichaEsc.nombre + ' se reincorpora');
+    },
     volverEquipo: () => setState({ tab: 'equipo', sheet: null }),
 
     // ---- Hoy (escolta) ----
@@ -508,7 +550,7 @@ export function useApp() {
     confirmar: () => { setState({ confirmado: true }); flash('Presencia confirmada · 05:58 · Alberto Ferrán'); },
     confirmarDetalle: () => { setState({ sheet: null, confirmado: true }); flash('Presencia confirmada · 05:58 · Alberto Ferrán'); },
     cerrarJornada: () => { setState({ cerrado: '20:30' }); flash('Jornada cerrada · 20:30 · 14 h 32 min'); },
-    verDetalleJornada: () => setState({ sheet: 'detalle', detalle: { dia: 12, desde: '06:00', hasta: '20:00', protegido: 'Alberto Ferrán', tipo: 'Jornada fija · residencia, oficina y agenda', dotacion: 'M. Ríos · relevo I. Colmenar' } }),
+    verDetalleJornada: () => setState({ sheet: 'detalle', detalle: { dia: 12, desde: '06:00', hasta: '20:00', protegido: 'Alberto Ferrán', tipo: 'Jornada fija · residencia, oficina y agenda', dotacion: 'M. Ríos · relevo I. Colmenar', telefono: st.protegidos.find(p => p.nombre === 'Alberto Ferrán')?.telefono } }),
 
     // ---- Vacaciones (escolta) ----
     saldo: [
@@ -524,6 +566,10 @@ export function useApp() {
     setMotivo: (v: string) => setState({ vacMotivo: v }),
     cupoAviso: 'Semana del 13 OCT: 1 de 3 plazas ocupadas. Tu solicitud entraría sin conflicto.',
     enviarSolicitud: () => {
+      if (dmyToLocalDate(st.vacHasta).getTime() < dmyToLocalDate(st.vacDesde).getTime()) {
+        flash('La fecha "Hasta" no puede ser anterior a "Desde"');
+        return;
+      }
       const id = 'n' + Date.now();
       const rango = st.vacDesde + ' – ' + st.vacHasta;
       setState(s => ({
@@ -564,16 +610,18 @@ export function useApp() {
       };
     }),
     abrirNuevoProtegido: () => setState({ sheet: 'nuevoProtegido' }),
-    epNombre: st.editProtegido.nombre, epRol: st.editProtegido.rol, epRutina: st.editProtegido.rutina,
+    epNombre: st.editProtegido.nombre, epRol: st.editProtegido.rol, epRutina: st.editProtegido.rutina, epTelefono: st.editProtegido.telefono,
     setEpNombre: (v: string) => setState(s => ({ editProtegido: { ...s.editProtegido, nombre: v } })),
     setEpRol: (v: string) => setState(s => ({ editProtegido: { ...s.editProtegido, rol: v } })),
     setEpRutina: (v: string) => setState(s => ({ editProtegido: { ...s.editProtegido, rutina: v } })),
+    setEpTelefono: (v: string) => setState(s => ({ editProtegido: { ...s.editProtegido, telefono: v } })),
     epNiveles: ['NIVEL 1', 'NIVEL 2', 'NIVEL 3'].map(n => ({
       label: n, on: st.editProtegido.nivel === n,
       onTap: () => setState(s => ({ editProtegido: { ...s.editProtegido, nivel: n } })),
     })),
     guardarEdicionProtegido,
-    npNombre: st.nuevoProtegido.nombre, npRol: st.nuevoProtegido.rol, npInicio: st.nuevoProtegido.inicio, npRutina: st.nuevoProtegido.rutina,
+    npNombre: st.nuevoProtegido.nombre, npRol: st.nuevoProtegido.rol, npInicio: st.nuevoProtegido.inicio, npRutina: st.nuevoProtegido.rutina, npTelefono: st.nuevoProtegido.telefono,
+    setNpTelefono: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, telefono: v } })),
     setNpNombre: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, nombre: v } })),
     setNpRol: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, rol: v } })),
     setNpInicio: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, inicio: v } })),
@@ -761,5 +809,7 @@ export function useApp() {
     enviarRecuperacion: () => { setState({ authView: 'login' }); flash('Enlace enviado al correo corporativo'); },
 
     toast: st.toast,
+    toastUndo,
+    deshacerToast,
   };
 }

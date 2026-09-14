@@ -42,6 +42,7 @@ export interface Detalle {
   tipo: string;
   dotacion: string;
   extraId?: string;
+  telefono?: string;
 }
 
 export interface NuevoServicio {
@@ -59,6 +60,7 @@ export interface AppState {
   tab: Tab;
   dia: number;
   filtro: string;
+  buscarEquipo: string;
   fichaId: number | null;
   sheet: Sheet;
   toast: string;
@@ -66,9 +68,9 @@ export interface AppState {
   equipo: Escolta[];
   protegidos: Protegido[];
   nuevoEscoltaNombre: string;
-  nuevoProtegido: { nombre: string; rol: string; nivel: string; titular: string; suplente: string; inicio: string; rutina: string };
+  nuevoProtegido: { nombre: string; rol: string; nivel: string; titular: string; suplente: string; inicio: string; rutina: string; telefono: string };
   nuevaHab: { nombre: string; num: string; vence: string; alerta: boolean };
-  editProtegido: { id: string; nombre: string; rol: string; nivel: string; rutina: string };
+  editProtegido: { id: string; nombre: string; rol: string; nivel: string; rutina: string; telefono: string };
   editandoServicioId: string | null;
   solicitudes: Solicitud[];
   misSolicitudes: MiSolicitud[];
@@ -104,6 +106,7 @@ export const initialState: AppState = {
   tab: 'hoy',
   dia: 12,
   filtro: 'Todos',
+  buscarEquipo: '',
   fichaId: null,
   sheet: null,
   toast: '',
@@ -111,9 +114,9 @@ export const initialState: AppState = {
   equipo: EQUIPO_INICIAL,
   protegidos: PROTEGIDOS_INICIAL,
   nuevoEscoltaNombre: '',
-  nuevoProtegido: { nombre: '', rol: '', nivel: 'NIVEL 1', titular: '', suplente: '', inicio: '08:00', rutina: '' },
+  nuevoProtegido: { nombre: '', rol: '', nivel: 'NIVEL 1', titular: '', suplente: '', inicio: '08:00', rutina: '', telefono: '' },
   nuevaHab: { nombre: '', num: '', vence: '', alerta: false },
-  editProtegido: { id: '', nombre: '', rol: '', nivel: 'NIVEL 1', rutina: '' },
+  editProtegido: { id: '', nombre: '', rol: '', nivel: 'NIVEL 1', rutina: '', telefono: '' },
   editandoServicioId: null,
   solicitudes: SOLICITUDES_INICIALES,
   misSolicitudes: MIS_SOLICITUDES_INICIALES,
@@ -149,7 +152,9 @@ export type Patch = Partial<AppState> | ((s: AppState) => Partial<AppState>);
 interface StoreValue {
   state: AppState;
   setState: (patch: Patch) => void;
-  flash: (text: string) => void;
+  flash: (text: string, onDeshacer?: () => void) => void;
+  toastUndo: (() => void) | null;
+  deshacerToast: () => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -157,6 +162,7 @@ const StoreContext = createContext<StoreValue | null>(null);
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [state, setStateRaw] = useState<AppState>(initialState);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastUndoRef = useRef<(() => void) | null>(null);
 
   // Mirrors this.setState from the prototype: accepts a partial object or
   // an updater function receiving the previous state.
@@ -164,14 +170,28 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setStateRaw(prev => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) }));
   }, []);
 
-  const flash = useCallback((text: string) => {
+  // A destructive action can pass onDeshacer to offer a brief "Deshacer"
+  // window on the toast instead of applying the change irreversibly.
+  const flash = useCallback((text: string, onDeshacer?: () => void) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastUndoRef.current = onDeshacer || null;
     setState({ toast: text });
-    toastTimer.current = setTimeout(() => setState({ toast: '' }), 2600);
+    toastTimer.current = setTimeout(() => {
+      toastUndoRef.current = null;
+      setState({ toast: '' });
+    }, onDeshacer ? 4500 : 2600);
+  }, [setState]);
+
+  const deshacerToast = useCallback(() => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    const fn = toastUndoRef.current;
+    toastUndoRef.current = null;
+    setState({ toast: '' });
+    fn?.();
   }, [setState]);
 
   return (
-    <StoreContext.Provider value={{ state, setState, flash }}>
+    <StoreContext.Provider value={{ state, setState, flash, toastUndo: toastUndoRef.current, deshacerToast }}>
       {children}
     </StoreContext.Provider>
   );

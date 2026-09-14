@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
+import { Phone } from 'lucide-react-native';
 import { color, font } from '../theme/theme';
 import { Avatar } from '../components/ui/Avatar';
 import { Field } from '../components/ui/Field';
@@ -86,6 +87,12 @@ function DetalleSheet() {
         <Text style={styles.detalleTipo}>{d.tipo}</Text>
         <Text style={styles.detalleDotacion}>Dotación: {d.dotacion}</Text>
       </View>
+      {!!d.telefono && (
+        <Pressable style={styles.contactoRow} onPress={() => Linking.openURL('tel:' + d.telefono!.replace(/\s+/g, ''))}>
+          <Phone size={16} strokeWidth={1.5} color={color.accent700} />
+          <Text style={styles.contactoTexto}>Llamar a {d.protegido} · {d.telefono}</Text>
+        </Pressable>
+      )}
       {app.coord ? (
         <>
           <Btn label="Avisar a la dotación" variant="primary" block onPress={app.notificarDotacion} />
@@ -224,6 +231,7 @@ function NuevoProtegidoSheet() {
         <ChipRow options={app.npSuplentes.map(s => ({ label: s.nombre, on: s.on, onTap: s.onTap }))} />
       </View>
       <TimeField label="Hora de presentación" value={app.npInicio} onChange={app.setNpInicio} />
+      <Field label="Teléfono de contacto" value={app.npTelefono} onChangeText={app.setNpTelefono} placeholder="+34 611 220 000" keyboardType="phone-pad" />
       <Field label="Rutina (opcional)" value={app.npRutina} onChangeText={app.setNpRutina} placeholder="Presentación 08:00 · domicilio y agenda" />
       <View style={styles.summaryBox}><Text style={styles.summaryText}>{app.npResumen}</Text></View>
       <Btn label="Añadir protegido" variant="primary" block onPress={app.crearProtegido} />
@@ -261,6 +269,7 @@ function EditarProtegidoSheet() {
         <Segmented options={app.epNiveles} small />
       </View>
       <Field label="Rutina" value={app.epRutina} onChangeText={app.setEpRutina} />
+      <Field label="Teléfono de contacto" value={app.epTelefono} onChangeText={app.setEpTelefono} placeholder="+34 611 220 000" keyboardType="phone-pad" />
       <Btn label="Guardar cambios" variant="primary" block onPress={app.guardarEdicionProtegido} />
     </View>
   );
@@ -292,4 +301,6 @@ const styles = StyleSheet.create({
   histK: { fontSize: 9, letterSpacing: 0.4, textTransform: 'uppercase', color: color.neutral600, marginTop: 2, textAlign: 'center', fontFamily: font.body },
   histLibres: { fontSize: 11, color: color.neutral700, marginTop: 9, paddingTop: 8, borderTopWidth: 1, borderTopColor: color.neutral200, fontFamily: font.body },
   alertaRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: color.neutral300, padding: 11 },
+  contactoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: color.accent600, padding: 11 },
+  contactoTexto: { fontSize: 13, color: color.accent700, fontFamily: font.bodyMedium, flex: 1 },
 });
