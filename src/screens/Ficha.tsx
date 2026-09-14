@@ -67,6 +67,9 @@ export function Ficha() {
         ))}
       </View>
 
+      {app.enVacaciones && (
+        <Btn label="Marcar como disponible (fin de vacaciones)" variant="primary" block onPress={app.finalizarVacaciones} style={{ marginBottom: 10 }} />
+      )}
       <Btn
         label="Eliminar escolta"
         variant="secondary"

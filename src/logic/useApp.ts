@@ -123,8 +123,11 @@ export function useApp() {
   const txtEstado = (e: string) => e === 'aprobada' ? 'APROBADA' : e === 'rechazada' ? 'RECHAZADA' : 'PENDIENTE';
 
   const resolver = (id: string, estado: 'aprobada' | 'rechazada', nombre: string) => {
-    setState(s => ({ solicitudes: s.solicitudes.map(x => x.id === id ? { ...x, estado } : x) }));
-    flash(estado === 'aprobada' ? 'Vacaciones aprobadas · ' + nombre : 'Solicitud rechazada · ' + nombre);
+    setState(s => ({
+      solicitudes: s.solicitudes.map(x => x.id === id ? { ...x, estado } : x),
+      equipo: estado === 'aprobada' ? s.equipo.map(e => e.nombre === nombre ? { ...e, estado: 'vacaciones' } : e) : s.equipo,
+    }));
+    flash(estado === 'aprobada' ? 'Vacaciones aprobadas · ' + nombre + ' pasa a vacaciones' : 'Solicitud rechazada · ' + nombre);
   };
 
   const dotacionPara = (f: number) => {
@@ -253,6 +256,22 @@ export function useApp() {
       };
     });
     flash('Protegido eliminado · ' + p.nombre);
+  };
+
+  const abrirEditarProtegido = (p: Protegido) => setState({
+    sheet: 'editarProtegido',
+    editProtegido: { id: p.id, nombre: p.nombre, rol: p.rol, nivel: p.nivel, rutina: p.rutina },
+  });
+  const guardarEdicionProtegido = () => {
+    const ep = st.editProtegido;
+    if (!ep.nombre.trim()) { flash('El nombre no puede quedar vacío'); return; }
+    setState(s => ({
+      sheet: null,
+      protegidos: s.protegidos.map(p => p.id === ep.id
+        ? { ...p, nombre: ep.nombre.trim(), rol: ep.rol.trim(), nivel: ep.nivel, rutina: ep.rutina.trim() }
+        : p),
+    }));
+    flash('Datos actualizados · ' + ep.nombre.trim());
   };
 
   const crearHabilitacion = () => {
@@ -438,6 +457,12 @@ export function useApp() {
     toggleNhAlerta: () => setState(s => ({ nuevaHab: { ...s.nuevaHab, alerta: !s.nuevaHab.alerta } })),
     crearHabilitacion,
     eliminarEscoltaActual: () => eliminarEscolta(fichaEsc.id),
+    enVacaciones: fichaEsc.estado === 'vacaciones',
+    finalizarVacaciones: () => {
+      const id = fichaEsc.id;
+      setState(s => ({ equipo: s.equipo.map(e => e.id === id ? { ...e, estado: 'disponible' } : e) }));
+      flash(fichaEsc.nombre + ' vuelve de vacaciones');
+    },
     volverEquipo: () => setState({ tab: 'equipo', sheet: null }),
 
     // ---- Hoy (escolta) ----
@@ -527,9 +552,19 @@ export function useApp() {
         onTap: () => setState({ sheet: 'asignacion', asigProt: p.id }),
         onNuevo: () => setState(s => ({ sheet: 'nuevo', nuevo: { ...s.nuevo, protegido: p.nombre, dotacion: [corto(a.titular)] } })),
         onEliminar: () => eliminarProtegido(p.id),
+        onEditarDatos: () => abrirEditarProtegido(p),
       };
     }),
     abrirNuevoProtegido: () => setState({ sheet: 'nuevoProtegido' }),
+    epNombre: st.editProtegido.nombre, epRol: st.editProtegido.rol, epRutina: st.editProtegido.rutina,
+    setEpNombre: (v: string) => setState(s => ({ editProtegido: { ...s.editProtegido, nombre: v } })),
+    setEpRol: (v: string) => setState(s => ({ editProtegido: { ...s.editProtegido, rol: v } })),
+    setEpRutina: (v: string) => setState(s => ({ editProtegido: { ...s.editProtegido, rutina: v } })),
+    epNiveles: ['NIVEL 1', 'NIVEL 2', 'NIVEL 3'].map(n => ({
+      label: n, on: st.editProtegido.nivel === n,
+      onTap: () => setState(s => ({ editProtegido: { ...s.editProtegido, nivel: n } })),
+    })),
+    guardarEdicionProtegido,
     npNombre: st.nuevoProtegido.nombre, npRol: st.nuevoProtegido.rol, npInicio: st.nuevoProtegido.inicio, npRutina: st.nuevoProtegido.rutina,
     setNpNombre: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, nombre: v } })),
     setNpRol: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, rol: v } })),
@@ -660,6 +695,7 @@ export function useApp() {
       : st.sheet === 'nuevoEscolta' ? 'Añadir escolta'
       : st.sheet === 'nuevoProtegido' ? 'Añadir protegido'
       : st.sheet === 'nuevaHabilitacion' ? 'Añadir habilitación'
+      : st.sheet === 'editarProtegido' ? 'Editar datos'
       : 'Solicitar días',
     sheetSub: st.sheet === 'asignar' ? 'Alberto Ferrán · desde las 19:00 · cena privada'
       : st.sheet === 'nuevo' ? 'Se añade sobre el dispositivo permanente del protegido'
@@ -669,6 +705,7 @@ export function useApp() {
       : st.sheet === 'nuevoEscolta' ? 'Se añade al equipo como disponible'
       : st.sheet === 'nuevoProtegido' ? 'Se añade con su titular y suplente fijos'
       : st.sheet === 'nuevaHabilitacion' ? 'Para ' + fichaEsc.nombre
+      : st.sheet === 'editarProtegido' ? 'Nombre, rol, nivel y rutina'
       : 'Cupo máximo: 3 escoltas por semana',
     cerrarSheet: () => setState({ sheet: null }),
 

@@ -22,3 +22,38 @@ export function formatIsoShort(iso: string): string {
   const date = isoToLocalDate(iso);
   return `${DIAS[date.getDay()]} ${date.getDate()} ${MESES_CORTO[date.getMonth()]}`;
 }
+
+// "DD/MM/YYYY" <-> local Date, used by the vacation and assignment fields
+// that were already storing dates in that format before the picker existed.
+export function dmyToLocalDate(dmy: string): Date {
+  const [d, m, y] = (dmy || '').split('/').map(Number);
+  if (!d || !m || !y) return new Date();
+  return new Date(y, m - 1, d);
+}
+
+export function localDateToDmy(date: Date): string {
+  const d = String(date.getDate()).padStart(2, '0');
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const y = date.getFullYear();
+  return `${d}/${m}/${y}`;
+}
+
+export function formatDmyShort(dmy: string): string {
+  const date = dmyToLocalDate(dmy);
+  return `${DIAS[date.getDay()]} ${date.getDate()} ${MESES_CORTO[date.getMonth()]}`;
+}
+
+// "HH:mm" <-> local Date (only the time-of-day part matters).
+export function hmToLocalDate(hm: string): Date {
+  const [h, m] = (hm || '').split(':').map(Number);
+  const d = new Date();
+  d.setHours(Number.isFinite(h) ? h : 12, Number.isFinite(m) ? m : 0, 0, 0);
+  return d;
+}
+
+export function localDateToHm(date: Date): string {
+  const h = String(date.getHours()).padStart(2, '0');
+  const m = String(date.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+

@@ -3,6 +3,8 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { color, font } from '../theme/theme';
 import { Avatar } from '../components/ui/Avatar';
 import { Field } from '../components/ui/Field';
+import { DateField } from '../components/ui/DateField';
+import { TimeField } from '../components/ui/TimeField';
 import { Btn } from '../components/ui/Button';
 import { ChipRow, Segmented } from '../components/ui/Segmented';
 import { Toggle } from '../components/ui/Toggle';
@@ -20,6 +22,7 @@ export function SheetContent() {
     case 'nuevoEscolta': return <NuevoEscoltaSheet />;
     case 'nuevoProtegido': return <NuevoProtegidoSheet />;
     case 'nuevaHabilitacion': return <NuevaHabilitacionSheet />;
+    case 'editarProtegido': return <EditarProtegidoSheet />;
     default: return null;
   }
 }
@@ -64,7 +67,7 @@ function AsignacionSheet() {
         <Text style={styles.label}>Suplente</Text>
         <ChipRow options={app.asigSuplentes.map(s => ({ label: s.nombre, on: s.on, onTap: s.onTap }))} />
       </View>
-      <Field label="Vigente desde" value={app.asigDesde} onChangeText={app.setAsigDesde} />
+      <DateField label="Vigente desde" value={app.asigDesde} onChange={app.setAsigDesde} format="dmy" />
       <View style={styles.summaryBox}><Text style={styles.summaryText}>{app.asigResumen}</Text></View>
       <Btn label="Guardar asignación" variant="primary" block onPress={app.guardarAsignacion} />
     </View>
@@ -112,7 +115,7 @@ function NuevoSheet() {
         <ChipRow options={app.nvDias} />
       </View>
       <View>
-        <Field label="Hora de presentación" value={app.nvDesde} onChangeText={app.setNvDesde} placeholder="19:00" />
+        <TimeField label="Hora de presentación" value={app.nvDesde} onChange={app.setNvDesde} />
         <Text style={styles.hint}>Sin hora de salida: el servicio termina al dejar al protegido en su domicilio.</Text>
       </View>
       <Field label="Lugar" value={app.nvLugar} onChangeText={app.setNvLugar} placeholder="Hotel Ritz · Plaza de la Lealtad" />
@@ -141,8 +144,8 @@ function SolicitudSheet() {
   return (
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Field label="Desde" value={app.vacDesde} onChangeText={app.setDesde} style={{ flex: 1 }} />
-        <Field label="Hasta" value={app.vacHasta} onChangeText={app.setHasta} style={{ flex: 1 }} />
+        <DateField label="Desde" value={app.vacDesde} onChange={app.setDesde} format="dmy" style={{ flex: 1 }} />
+        <DateField label="Hasta" value={app.vacHasta} onChange={app.setHasta} format="dmy" style={{ flex: 1 }} />
       </View>
       <Field label="Motivo (opcional)" value={app.vacMotivo} onChangeText={app.setMotivo} placeholder="Vacaciones de verano" />
       <View style={styles.summaryBox}><Text style={styles.summaryText}>{app.cupoAviso}</Text></View>
@@ -219,7 +222,7 @@ function NuevoProtegidoSheet() {
         <Text style={styles.label}>Suplente</Text>
         <ChipRow options={app.npSuplentes.map(s => ({ label: s.nombre, on: s.on, onTap: s.onTap }))} />
       </View>
-      <Field label="Hora de presentación" value={app.npInicio} onChangeText={app.setNpInicio} placeholder="08:00" />
+      <TimeField label="Hora de presentación" value={app.npInicio} onChange={app.setNpInicio} />
       <Field label="Rutina (opcional)" value={app.npRutina} onChangeText={app.setNpRutina} placeholder="Presentación 08:00 · domicilio y agenda" />
       <View style={styles.summaryBox}><Text style={styles.summaryText}>{app.npResumen}</Text></View>
       <Btn label="Añadir protegido" variant="primary" block onPress={app.crearProtegido} />
@@ -242,6 +245,22 @@ function NuevaHabilitacionSheet() {
         <Toggle on={app.nhAlerta} onTap={app.toggleNhAlerta} />
       </View>
       <Btn label="Añadir habilitación" variant="primary" block onPress={app.crearHabilitacion} />
+    </View>
+  );
+}
+
+function EditarProtegidoSheet() {
+  const app = useApp();
+  return (
+    <View style={{ gap: 14 }}>
+      <Field label="Nombre completo" value={app.epNombre} onChangeText={app.setEpNombre} />
+      <Field label="Rol / relación" value={app.epRol} onChangeText={app.setEpRol} />
+      <View>
+        <Text style={styles.label}>Nivel</Text>
+        <Segmented options={app.epNiveles} small />
+      </View>
+      <Field label="Rutina" value={app.epRutina} onChangeText={app.setEpRutina} />
+      <Btn label="Guardar cambios" variant="primary" block onPress={app.guardarEdicionProtegido} />
     </View>
   );
 }

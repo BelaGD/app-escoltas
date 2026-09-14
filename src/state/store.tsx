@@ -14,7 +14,7 @@ import {
 
 export type Rol = 'coord' | 'escolta';
 export type Tab = 'hoy' | 'cal' | 'vac' | 'prot' | 'equipo' | 'perfil' | 'ficha' | 'notif' | 'ajustes';
-export type Sheet = 'asignar' | 'nuevo' | 'asignacion' | 'detalle' | 'solicitud' | 'historial' | 'nuevoEscolta' | 'nuevoProtegido' | 'nuevaHabilitacion' | null;
+export type Sheet = 'asignar' | 'nuevo' | 'asignacion' | 'detalle' | 'solicitud' | 'historial' | 'nuevoEscolta' | 'nuevoProtegido' | 'nuevaHabilitacion' | 'editarProtegido' | null;
 export type AuthView = 'login' | 'recuperar';
 export type CalVista = 'Semana' | 'Mes' | 'Año';
 
@@ -66,6 +66,7 @@ export interface AppState {
   nuevoEscoltaNombre: string;
   nuevoProtegido: { nombre: string; rol: string; nivel: string; titular: string; suplente: string; inicio: string; rutina: string };
   nuevaHab: { nombre: string; num: string; vence: string; alerta: boolean };
+  editProtegido: { id: string; nombre: string; rol: string; nivel: string; rutina: string };
   solicitudes: Solicitud[];
   misSolicitudes: MiSolicitud[];
   vacDesde: string;
@@ -110,6 +111,7 @@ export const initialState: AppState = {
   nuevoEscoltaNombre: '',
   nuevoProtegido: { nombre: '', rol: '', nivel: 'NIVEL 1', titular: '', suplente: '', inicio: '08:00', rutina: '' },
   nuevaHab: { nombre: '', num: '', vence: '', alerta: false },
+  editProtegido: { id: '', nombre: '', rol: '', nivel: 'NIVEL 1', rutina: '' },
   solicitudes: SOLICITUDES_INICIALES,
   misSolicitudes: MIS_SOLICITUDES_INICIALES,
   vacDesde: '13/10/2026',

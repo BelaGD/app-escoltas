@@ -48,6 +48,7 @@ export function Protegidos() {
               <Btn label="Editar asignación" variant="primary" onPress={p.onTap} style={{ flex: 1 }} small />
               <Btn label="Añadir servicio" variant="secondary" onPress={p.onNuevo} style={{ flex: 1 }} small />
             </View>
+            <Btn label="Editar datos" variant="ghost" onPress={p.onEditarDatos} small style={{ marginTop: 2 }} />
           </Blueprint>
         ))}
       </View>
