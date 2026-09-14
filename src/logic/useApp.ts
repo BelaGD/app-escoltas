@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useStore, AppState, Patch } from '../state/store';
 import {
   EST, SEMANA, MESES, DIA_SERV, EST_PROT, CUPO_DATA,
-  HOY, WARN, MUT, AC, Escolta, Protegido, ServicioRaw, MiSolicitud,
+  HOY, WARN, MUT, AC, Escolta, Protegido, ServicioRaw, MiSolicitud, Solicitud,
 } from '../data/mock';
 import { color } from '../theme/theme';
 import { diaCiclo, enJornada } from './ciclo';
@@ -51,10 +51,13 @@ export function useApp() {
 
   const serviciosDe = (dia: number) => porDia[dia] || [];
 
-  const abrirDetalle = (dia: number, s: ServicioRaw) => setState({
-    sheet: 'detalle',
-    detalle: { dia, desde: s[0], hasta: s[1], protegido: s[2], tipo: s[3], dotacion: s[4] || 'Sin dotación asignada' },
-  });
+  const abrirDetalle = (dia: number, s: ServicioRaw) => {
+    const extraMatch = st.extra.find(e => e.dia === dia && e.desde === s[0] && e.protegido === s[2]);
+    setState({
+      sheet: 'detalle',
+      detalle: { dia, desde: s[0], hasta: s[1], protegido: s[2], tipo: s[3], dotacion: s[4] || 'Sin dotación asignada', extraId: extraMatch?.id },
+    });
+  };
 
   const heads: Record<string, [string, string]> = {
     hoy: coord ? ['Mando · Sábado 12 SEP', 'Hoy'] : ['Escolta · Sábado 12 SEP', 'Mi jornada'],
@@ -125,6 +128,7 @@ export function useApp() {
   const resolver = (id: string, estado: 'aprobada' | 'rechazada', nombre: string) => {
     setState(s => ({
       solicitudes: s.solicitudes.map(x => x.id === id ? { ...x, estado } : x),
+      misSolicitudes: s.misSolicitudes.map(x => x.id === id ? { ...x, estado } : x),
       equipo: estado === 'aprobada' ? s.equipo.map(e => e.nombre === nombre ? { ...e, estado: 'vacaciones' } : e) : s.equipo,
     }));
     flash(estado === 'aprobada' ? 'Vacaciones aprobadas · ' + nombre + ' pasa a vacaciones' : 'Solicitud rechazada · ' + nombre);
@@ -520,10 +524,14 @@ export function useApp() {
     setMotivo: (v: string) => setState({ vacMotivo: v }),
     cupoAviso: 'Semana del 13 OCT: 1 de 3 plazas ocupadas. Tu solicitud entraría sin conflicto.',
     enviarSolicitud: () => {
+      const id = 'n' + Date.now();
+      const rango = st.vacDesde + ' – ' + st.vacHasta;
       setState(s => ({
         sheet: null,
-        misSolicitudes: ([{ id: 'n' + Date.now(), rango: s.vacDesde + ' – ' + s.vacHasta, dias: '5 días laborables', estado: 'pendiente' }] as MiSolicitud[])
+        misSolicitudes: ([{ id, rango, dias: '5 días laborables', estado: 'pendiente' }] as MiSolicitud[])
           .concat(s.misSolicitudes.filter(x => x.id !== 'm1')),
+        solicitudes: ([{ id, nombre: 'Marta Ríos', rango, dias: '5 días laborables', aviso: '', warn: false, estado: 'pendiente' }] as Solicitud[])
+          .concat(s.solicitudes),
       }));
       flash('Solicitud enviada a coordinación');
     },
@@ -550,7 +558,7 @@ export function useApp() {
         borde: p.estado === 'sin' ? WARN : color.neutral300,
         eventos: SEMANA.reduce((n, d) => n + serviciosDe(d.num).filter(s => s[2] === p.nombre).length, 0) + ' esta semana',
         onTap: () => setState({ sheet: 'asignacion', asigProt: p.id }),
-        onNuevo: () => setState(s => ({ sheet: 'nuevo', nuevo: { ...s.nuevo, protegido: p.nombre, dotacion: [corto(a.titular)] } })),
+        onNuevo: () => setState(s => ({ sheet: 'nuevo', editandoServicioId: null, nuevo: { ...s.nuevo, protegido: p.nombre, dotacion: [corto(a.titular)] } })),
         onEliminar: () => eliminarProtegido(p.id),
         onEditarDatos: () => abrirEditarProtegido(p),
       };
@@ -619,6 +627,16 @@ export function useApp() {
     // ---- Sheet: detalle de servicio ----
     detalle: st.detalle || { protegido: '', desde: '', hasta: '', tipo: '', dotacion: '', dia: 12 },
     notificarDotacion: () => { setState({ sheet: null }); flash('Aviso enviado a la dotación'); },
+    puedeEditarServicio: coord && !!st.detalle?.extraId,
+    abrirEditarServicio: () => {
+      const item = st.extra.find(e => e.id === st.detalle?.extraId);
+      if (!item) return;
+      setState({
+        sheet: 'nuevo',
+        editandoServicioId: item.id,
+        nuevo: { dia: item.dia, protegido: item.protegido, tipo: item.tipo, desde: item.desde, hasta: item.hasta, lugar: item.lugar, dotacion: item.dotacion.split(' · ').filter(Boolean) },
+      });
+    },
     cancelarServicio: () => {
       const d = st.detalle!;
       setState(s => ({ sheet: null, cancelados: s.cancelados.concat([d.dia + '|' + d.desde + '|' + d.protegido]) }));
@@ -627,7 +645,8 @@ export function useApp() {
 
     // ---- FAB / Sheet: nuevo servicio ----
     mostrarFab: coord && (tab === 'hoy' || tab === 'cal' || tab === 'prot'),
-    abrirNuevo: () => setState({ sheet: 'nuevo' }),
+    abrirNuevo: () => setState({ sheet: 'nuevo', editandoServicioId: null }),
+    editandoServicio: !!st.editandoServicioId,
     nvDias: SEMANA.map(d => ({ label: d.dia + ' ' + d.num, on: st.nuevo.dia === d.num, onTap: () => setState(s => ({ nuevo: { ...s.nuevo, dia: d.num } })) })),
     nvProtegidos: st.protegidos.map(p => ({ label: p.nombre, on: st.nuevo.protegido === p.nombre, onTap: () => setState(s => ({ nuevo: { ...s.nuevo, protegido: p.nombre } })) })),
     nvTipos: ['Evento', 'Traslado', 'Viaje', 'Refuerzo'].map(t => ({ label: t, on: st.nuevo.tipo === t, onTap: () => setState(s => ({ nuevo: { ...s.nuevo, tipo: t } })) })),
@@ -647,11 +666,22 @@ export function useApp() {
     nvResumen: st.nuevo.protegido + ' · ' + st.nuevo.dia + ' SEP · desde las ' + st.nuevo.desde + ' · ' + (st.nuevo.dotacion.length || 'sin') + ' escolta' + (st.nuevo.dotacion.length === 1 ? '' : 's'),
     crearServicio: () => {
       const n = st.nuevo;
-      setState(s => ({
-        sheet: null, dia: n.dia,
-        extra: s.extra.concat([{ dia: n.dia, desde: n.desde, hasta: '', protegido: n.protegido, tipo: n.tipo, lugar: n.lugar || 'Lugar por confirmar', dotacion: n.dotacion.join(' · ') }]),
-      }));
-      flash('Servicio especial creado · ' + n.protegido);
+      if (st.editandoServicioId) {
+        const id = st.editandoServicioId;
+        setState(s => ({
+          sheet: null, dia: n.dia, editandoServicioId: null,
+          extra: s.extra.map(e => e.id === id
+            ? { ...e, dia: n.dia, desde: n.desde, protegido: n.protegido, tipo: n.tipo, lugar: n.lugar || 'Lugar por confirmar', dotacion: n.dotacion.join(' · ') }
+            : e),
+        }));
+        flash('Servicio actualizado · ' + n.protegido);
+      } else {
+        setState(s => ({
+          sheet: null, dia: n.dia,
+          extra: s.extra.concat([{ id: 's' + Date.now(), dia: n.dia, desde: n.desde, hasta: '', protegido: n.protegido, tipo: n.tipo, lugar: n.lugar || 'Lugar por confirmar', dotacion: n.dotacion.join(' · ') }]),
+        }));
+        flash('Servicio especial creado · ' + n.protegido);
+      }
     },
 
     // ---- Notificaciones ----
@@ -677,7 +707,6 @@ export function useApp() {
       label: p.label, nota: p.nota, on: st.prefs[p.key],
       onTap: () => setState(s => ({ prefs: { ...s.prefs, [p.key]: !s.prefs[p.key] } })),
     })),
-    idiomas: ['Español', 'English'].map(l => ({ label: l, on: st.idioma === l, onTap: () => setState({ idioma: l }) })),
     sesionInfo: [
       { k: 'Último acceso', v: 'Hoy 05:41 · Madrid' },
       { k: 'Dispositivo', v: 'Pixel 8 · corporativo' },
@@ -688,7 +717,7 @@ export function useApp() {
     // ---- Bottom sheet chrome ----
     sheet: st.sheet,
     sheetTitulo: st.sheet === 'asignar' ? 'Cubrir servicio'
-      : st.sheet === 'nuevo' ? 'Nuevo servicio especial'
+      : st.sheet === 'nuevo' ? (st.editandoServicioId ? 'Editar servicio especial' : 'Nuevo servicio especial')
       : st.sheet === 'asignacion' ? 'Asignación permanente'
       : st.sheet === 'detalle' ? 'Detalle del servicio'
       : st.sheet === 'historial' ? 'Historial de dotación'
@@ -698,7 +727,7 @@ export function useApp() {
       : st.sheet === 'editarProtegido' ? 'Editar datos'
       : 'Solicitar días',
     sheetSub: st.sheet === 'asignar' ? 'Alberto Ferrán · desde las 19:00 · cena privada'
-      : st.sheet === 'nuevo' ? 'Se añade sobre el dispositivo permanente del protegido'
+      : st.sheet === 'nuevo' ? (st.editandoServicioId ? 'Modifica los datos y guarda' : 'Se añade sobre el dispositivo permanente del protegido')
       : st.sheet === 'asignacion' ? 'Titular y suplente de ' + protActualAsig.nombre
       : st.sheet === 'detalle' ? (st.detalle ? st.detalle.protegido + ' · desde las ' + st.detalle.desde : '')
       : st.sheet === 'historial' ? 'Últimos 7 días, según el ciclo 14/7 y las asignaciones actuales'
@@ -707,7 +736,7 @@ export function useApp() {
       : st.sheet === 'nuevaHabilitacion' ? 'Para ' + fichaEsc.nombre
       : st.sheet === 'editarProtegido' ? 'Nombre, rol, nivel y rutina'
       : 'Cupo máximo: 3 escoltas por semana',
-    cerrarSheet: () => setState({ sheet: null }),
+    cerrarSheet: () => setState({ sheet: null, editandoServicioId: null }),
 
     // ---- Auth ----
     sesion: st.sesion,

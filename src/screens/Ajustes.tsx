@@ -4,7 +4,6 @@ import { color, font } from '../theme/theme';
 import { Blueprint } from '../components/ui/Blueprint';
 import { Avatar } from '../components/ui/Avatar';
 import { Toggle } from '../components/ui/Toggle';
-import { Segmented } from '../components/ui/Segmented';
 import { Btn } from '../components/ui/Button';
 import { SectionTitle } from '../components/ui/Section';
 import { useApp } from '../logic/useApp';
@@ -33,11 +32,6 @@ export function Ajustes() {
             <Toggle on={p.on} onTap={p.onTap} />
           </View>
         ))}
-      </View>
-
-      <SectionTitle>Idioma</SectionTitle>
-      <View style={{ marginBottom: 18 }}>
-        <Segmented options={app.idiomas} />
       </View>
 
       <SectionTitle>Sesión</SectionTitle>

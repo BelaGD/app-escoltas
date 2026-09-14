@@ -89,6 +89,7 @@ function DetalleSheet() {
       {app.coord ? (
         <>
           <Btn label="Avisar a la dotación" variant="primary" block onPress={app.notificarDotacion} />
+          {app.puedeEditarServicio && <Btn label="Editar servicio" variant="secondary" block onPress={app.abrirEditarServicio} />}
           <Btn label="Cancelar servicio" variant="secondary" block onPress={app.cancelarServicio} />
         </>
       ) : (
@@ -134,7 +135,7 @@ function NuevoSheet() {
         </View>
       </View>
       <View style={styles.summaryBox}><Text style={styles.summaryText}>{app.nvResumen}</Text></View>
-      <Btn label="Crear servicio" variant="primary" block onPress={app.crearServicio} />
+      <Btn label={app.editandoServicio ? 'Guardar cambios' : 'Crear servicio'} variant="primary" block onPress={app.crearServicio} />
     </View>
   );
 }

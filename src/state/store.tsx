@@ -19,6 +19,7 @@ export type AuthView = 'login' | 'recuperar';
 export type CalVista = 'Semana' | 'Mes' | 'Año';
 
 export interface ServicioExtra {
+  id: string;
   dia: number;
   desde: string;
   hasta: string;
@@ -40,6 +41,7 @@ export interface Detalle {
   protegido: string;
   tipo: string;
   dotacion: string;
+  extraId?: string;
 }
 
 export interface NuevoServicio {
@@ -67,6 +69,7 @@ export interface AppState {
   nuevoProtegido: { nombre: string; rol: string; nivel: string; titular: string; suplente: string; inicio: string; rutina: string };
   nuevaHab: { nombre: string; num: string; vence: string; alerta: boolean };
   editProtegido: { id: string; nombre: string; rol: string; nivel: string; rutina: string };
+  editandoServicioId: string | null;
   solicitudes: Solicitud[];
   misSolicitudes: MiSolicitud[];
   vacDesde: string;
@@ -92,7 +95,6 @@ export interface AppState {
   pass: string;
   correo: string;
   authError: string;
-  idioma: string;
   prefs: { servicio: boolean; vacaciones: boolean; silencio: boolean };
   notifs: Notif[];
 }
@@ -112,6 +114,7 @@ export const initialState: AppState = {
   nuevoProtegido: { nombre: '', rol: '', nivel: 'NIVEL 1', titular: '', suplente: '', inicio: '08:00', rutina: '' },
   nuevaHab: { nombre: '', num: '', vence: '', alerta: false },
   editProtegido: { id: '', nombre: '', rol: '', nivel: 'NIVEL 1', rutina: '' },
+  editandoServicioId: null,
   solicitudes: SOLICITUDES_INICIALES,
   misSolicitudes: MIS_SOLICITUDES_INICIALES,
   vacDesde: '13/10/2026',
@@ -137,7 +140,6 @@ export const initialState: AppState = {
   pass: '',
   correo: '',
   authError: '',
-  idioma: 'Español',
   prefs: { servicio: true, vacaciones: true, silencio: false },
   notifs: NOTIFS_INICIALES,
 };
