@@ -15,6 +15,7 @@ export function SheetContent() {
     case 'detalle': return <DetalleSheet />;
     case 'nuevo': return <NuevoSheet />;
     case 'solicitud': return <SolicitudSheet />;
+    case 'historial': return <HistorialSheet />;
     default: return null;
   }
 }
@@ -146,6 +147,38 @@ function SolicitudSheet() {
   );
 }
 
+function HistorialSheet() {
+  const app = useApp();
+  return (
+    <View style={{ gap: 10 }}>
+      {app.dotacionHistorial.map((d, i) => (
+        <View key={i} style={styles.histRow}>
+          <Text style={styles.histFecha}>{d.fecha}</Text>
+          <View style={styles.histGrid}>
+            <View style={styles.histCol}>
+              <Text style={[styles.histN, { color: color.accent700 }]}>{d.conProtegido}</Text>
+              <Text style={styles.histK}>Con protegido</Text>
+            </View>
+            <View style={styles.histCol}>
+              <Text style={[styles.histN, { color: color.accent700 }]}>{d.libres}</Text>
+              <Text style={styles.histK}>Libres</Text>
+            </View>
+            <View style={styles.histCol}>
+              <Text style={[styles.histN, { color: color.neutral800 }]}>{d.libranza}</Text>
+              <Text style={styles.histK}>Libranza</Text>
+            </View>
+            <View style={styles.histCol}>
+              <Text style={[styles.histN, { color: color.neutral800 }]}>{d.vacaciones}</Text>
+              <Text style={styles.histK}>Vacaciones</Text>
+            </View>
+          </View>
+          <Text style={styles.histLibres} numberOfLines={2}>{d.libresNombres}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   candRow: { flexDirection: 'row', alignItems: 'center', gap: 11, borderWidth: 1, borderColor: color.neutral300, padding: 10 },
   candNombre: { fontSize: 13.5, fontWeight: '600', color: color.text, fontFamily: font.bodySemiBold },
@@ -164,4 +197,11 @@ const styles = StyleSheet.create({
   detalleTipo: { fontSize: 12, color: color.neutral700, marginTop: 3, fontFamily: font.body },
   detalleDotacion: { fontSize: 12, color: color.neutral700, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: color.neutral200, fontFamily: font.body },
   hint: { fontSize: 11, color: color.neutral600, marginTop: 5, fontFamily: font.body },
+  histRow: { borderWidth: 1, borderColor: color.neutral300, padding: 11 },
+  histFecha: { fontFamily: font.heading, fontSize: 15, textTransform: 'uppercase', color: color.text, marginBottom: 8 },
+  histGrid: { flexDirection: 'row' },
+  histCol: { flex: 1, alignItems: 'center' },
+  histN: { fontFamily: font.heading, fontSize: 20 },
+  histK: { fontSize: 9, letterSpacing: 0.4, textTransform: 'uppercase', color: color.neutral600, marginTop: 2, textAlign: 'center', fontFamily: font.body },
+  histLibres: { fontSize: 11, color: color.neutral700, marginTop: 9, paddingTop: 8, borderTopWidth: 1, borderTopColor: color.neutral200, fontFamily: font.body },
 });

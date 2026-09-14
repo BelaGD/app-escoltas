@@ -127,10 +127,7 @@ export function useApp() {
     flash(estado === 'aprobada' ? 'Vacaciones aprobadas · ' + nombre : 'Solicitud rechazada · ' + nombre);
   };
 
-  const dotacion = (() => {
-    const p = (st.fechaDot || '').split('-').map(Number);
-    const valida = p.length === 3 && p.every(n => Number.isFinite(n) && n > 0) && p[0] >= 2026 && p[0] <= 2030 && p[1] <= 12 && p[2] <= 31;
-    const f = valida ? Date.UTC(p[0], p[1] - 1, p[2]) : HOY;
+  const dotacionPara = (f: number) => {
     const esHoy = f === HOY;
     const total = EQUIPO.length;
     const vac = EQUIPO.filter(e => e.estado === 'vacaciones');
@@ -139,6 +136,14 @@ export function useApp() {
     const conProt = jorn.filter(e => protDe(e.nombre));
     const libres = jorn.filter(e => !protDe(e.nombre));
     const libranza = activos.filter(e => !enJornada(f, e.nombre));
+    return { esHoy, total, vac, conProt, libres, libranza };
+  };
+
+  const dotacion = (() => {
+    const p = (st.fechaDot || '').split('-').map(Number);
+    const valida = p.length === 3 && p.every(n => Number.isFinite(n) && n > 0) && p[0] >= 2026 && p[0] <= 2030 && p[1] <= 12 && p[2] <= 31;
+    const f = valida ? Date.UTC(p[0], p[1] - 1, p[2]) : HOY;
+    const { esHoy, total, vac, conProt, libres, libranza } = dotacionPara(f);
     const pct = (n: number) => Math.round((n / total) * 100) + '%';
     const dd = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][new Date(f).getUTCDay()];
     const rango = valida ? '' : ' (rango 2026–2030)';
@@ -156,6 +161,20 @@ export function useApp() {
       libresNombres: (libres.length ? 'Disponibles: ' + libres.map(e => e.nombre).join(' · ') : 'Ningún escolta libre para refuerzo ese día') + rango,
     };
   })();
+
+  const abrirHistorialDotacion = () => setState({ sheet: 'historial' });
+  const dotacionHistorial = Array.from({ length: 7 }, (_, i) => {
+    const f = HOY - i * 86400000;
+    const { esHoy, conProt, libres, libranza, vac } = dotacionPara(f);
+    const dd = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'][new Date(f).getUTCDay()];
+    const fecha = new Date(f);
+    return {
+      fecha: esHoy ? 'Hoy · ' + dd + ' ' + fecha.getUTCDate() + ' SEP' : dd + ' ' + fecha.getUTCDate() + ' SEP',
+      conProtegido: conProt.length, libres: libres.length, libranza: libranza.length, vacaciones: vac.length,
+      libresNombres: libres.length ? libres.map(e => e.nombre).join(' · ') : 'Nadie libre para refuerzo',
+    };
+  });
+
 
   const protegidosHoy = PROTEGIDOS.map(p => {
     const a = asigDe(p);
@@ -198,6 +217,8 @@ export function useApp() {
 
     // ---- Hoy (coordinación) ----
     dotacion,
+    dotacionHistorial,
+    abrirHistorialDotacion,
     fechaDot: st.fechaDot,
     setFechaDot: (v: string) => setState({ fechaDot: v }),
     protegidosHoy,
@@ -509,11 +530,13 @@ export function useApp() {
       : st.sheet === 'nuevo' ? 'Nuevo servicio especial'
       : st.sheet === 'asignacion' ? 'Asignación permanente'
       : st.sheet === 'detalle' ? 'Detalle del servicio'
+      : st.sheet === 'historial' ? 'Historial de dotación'
       : 'Solicitar días',
     sheetSub: st.sheet === 'asignar' ? 'Alberto Ferrán · desde las 19:00 · cena privada'
       : st.sheet === 'nuevo' ? 'Se añade sobre el dispositivo permanente del protegido'
       : st.sheet === 'asignacion' ? 'Titular y suplente de ' + protActualAsig.nombre
       : st.sheet === 'detalle' ? (st.detalle ? st.detalle.protegido + ' · desde las ' + st.detalle.desde : '')
+      : st.sheet === 'historial' ? 'Últimos 7 días, según el ciclo 14/7 y las asignaciones actuales'
       : 'Cupo máximo: 3 escoltas por semana',
     cerrarSheet: () => setState({ sheet: null }),
 

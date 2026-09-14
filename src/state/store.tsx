@@ -10,7 +10,7 @@ import {
 
 export type Rol = 'coord' | 'escolta';
 export type Tab = 'hoy' | 'cal' | 'vac' | 'prot' | 'equipo' | 'perfil' | 'ficha' | 'notif' | 'ajustes';
-export type Sheet = 'asignar' | 'nuevo' | 'asignacion' | 'detalle' | 'solicitud' | null;
+export type Sheet = 'asignar' | 'nuevo' | 'asignacion' | 'detalle' | 'solicitud' | 'historial' | null;
 export type AuthView = 'login' | 'codigo' | 'recuperar';
 export type CalVista = 'Semana' | 'Mes' | 'Año';
 

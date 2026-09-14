@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { History } from 'lucide-react-native';
 import { color, font } from '../theme/theme';
 import { Blueprint } from '../components/ui/Blueprint';
-import { Field } from '../components/ui/Field';
+import { DateField } from '../components/ui/DateField';
 import { Tag } from '../components/ui/Tag';
 import { ListRow } from '../components/ui/ListRow';
 import { SectionTitle } from '../components/ui/Section';
@@ -15,10 +16,17 @@ export function HoyCoord() {
   return (
     <View>
       <Blueprint style={styles.dotacionBox}>
-        <Text style={styles.kicker}>Dotación disponible</Text>
-        <Text style={styles.h}>{dotacion.titulo}</Text>
+        <View style={styles.dotacionHead}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.kicker}>Dotación disponible</Text>
+            <Text style={styles.h}>{dotacion.titulo}</Text>
+          </View>
+          <Pressable style={styles.historialBtn} onPress={app.abrirHistorialDotacion} hitSlop={6}>
+            <History size={16} strokeWidth={1.5} color={color.accent700} />
+          </Pressable>
+        </View>
         <View style={styles.dateRow}>
-          <Field label="Consultar fecha" value={app.fechaDot} onChangeText={app.setFechaDot} placeholder="2026-09-12" style={{ flex: 1 }} />
+          <DateField label="Consultar fecha" value={app.fechaDot} onChange={app.setFechaDot} style={{ flex: 1 }} />
           <Text style={styles.dateHint}>{dotacion.fechaTxt}</Text>
         </View>
         <View style={{ gap: 9, marginTop: 12 }}>
@@ -90,6 +98,8 @@ function ListRowMini({ ini, nombre, nota, trailing }: { ini: string; nombre: str
 
 const styles = StyleSheet.create({
   dotacionBox: { padding: 13, marginBottom: 20 },
+  dotacionHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  historialBtn: { width: 30, height: 30, borderWidth: 1, borderColor: color.neutral300, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   kicker: { fontFamily: font.heading, fontSize: 11, letterSpacing: 1.8, textTransform: 'uppercase', color: color.accent700 },
   h: { fontFamily: font.heading, fontSize: 26, lineHeight: 27, textTransform: 'uppercase', color: color.text, marginTop: 3 },
   dateRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginTop: 10 },

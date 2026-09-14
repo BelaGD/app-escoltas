@@ -65,15 +65,17 @@ export function Shell() {
         onAjustes={app.irAjustes}
       />
 
-      <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled">
-        <Content />
-      </ScrollView>
+      <View style={styles.contentArea}>
+        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled">
+          <Content />
+        </ScrollView>
+
+        {app.mostrarFab && <Fab onPress={app.abrirNuevo} />}
+      </View>
 
       <View style={{ paddingBottom: insets.bottom }}>
         <BottomNav items={app.navDefs as [string, string][]} active={app.activeTab} onTap={t => app.go(t as any)} />
       </View>
-
-      {app.mostrarFab && <Fab onPress={app.abrirNuevo} />}
 
       <BottomSheet open={!!app.sheet} title={app.sheetTitulo} subtitle={app.sheetSub} onClose={app.cerrarSheet}>
         <SheetContent />
@@ -87,6 +89,7 @@ export function Shell() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.bg },
   roleSwitch: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  contentArea: { flex: 1 },
   body: { flex: 1 },
   bodyContent: { padding: 16, paddingBottom: 90 },
 });
