@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useStore, AppState, Patch } from '../state/store';
 import {
-  EST, SEMANA, MESES, DIA_SERV, EST_PROT, CUPO_DATA, CERTS,
+  EST, SEMANA, MESES, DIA_SERV, EST_PROT, CUPO_DATA,
   HOY, WARN, MUT, AC, Escolta, Protegido, ServicioRaw, MiSolicitud,
 } from '../data/mock';
 import { color } from '../theme/theme';
@@ -209,7 +209,7 @@ export function useApp() {
     setState(s => ({
       sheet: null,
       nuevoEscoltaNombre: '',
-      equipo: s.equipo.concat([{ id: Date.now(), nombre, ini, estado: 'disponible', horas: 0, cli: '' }]),
+      equipo: s.equipo.concat([{ id: Date.now(), nombre, ini, estado: 'disponible', horas: 0, cli: '', certs: [] }]),
     }));
     flash('Escolta añadido · ' + nombre);
   };
@@ -253,6 +253,27 @@ export function useApp() {
       };
     });
     flash('Protegido eliminado · ' + p.nombre);
+  };
+
+  const crearHabilitacion = () => {
+    const h = st.nuevaHab;
+    if (!h.nombre.trim()) { flash('Escribe el nombre de la habilitación'); return; }
+    const escoltaId = fichaEsc.id;
+    setState(s => ({
+      sheet: null,
+      nuevaHab: { nombre: '', num: '', vence: '', alerta: false },
+      equipo: s.equipo.map(e => e.id === escoltaId
+        ? { ...e, certs: e.certs.concat([{ id: 'c' + Date.now(), nombre: h.nombre.trim(), num: h.num.trim(), vence: h.vence.trim() || 'Sin fecha', alerta: h.alerta }]) }
+        : e),
+    }));
+    flash('Habilitación añadida · ' + h.nombre.trim());
+  };
+  const eliminarHabilitacion = (certId: string) => {
+    const escoltaId = fichaEsc.id;
+    setState(s => ({
+      equipo: s.equipo.map(e => e.id === escoltaId ? { ...e, certs: e.certs.filter(c => c.id !== certId) } : e),
+    }));
+    flash('Habilitación eliminada');
   };
 
   return {
@@ -398,13 +419,24 @@ export function useApp() {
         { v: '11', k: 'Días vacac.' },
         { v: '14 h', k: 'Último descanso' },
       ],
-      certs: CERTS,
+      certs: fichaEsc.certs.map(c => ({
+        id: c.id, nombre: c.nombre, num: c.num, vence: c.vence,
+        color: c.alerta ? WARN : MUT,
+        onEliminar: () => eliminarHabilitacion(c.id),
+      })),
       proximos: [
         { cuando: 'HOY 06:00', cliente: 'Alberto Ferrán · jornada', horas: 'est. 14 h' },
         { cuando: 'DOM 12:00', cliente: 'Almuerzo finca Toledo', horas: 'est. 6 h' },
         { cuando: 'MAR 06:00', cliente: 'Alberto Ferrán · jornada', horas: 'est. 14 h' },
       ],
     },
+    abrirNuevaHabilitacion: () => setState({ sheet: 'nuevaHabilitacion' }),
+    nhNombre: st.nuevaHab.nombre, nhNum: st.nuevaHab.num, nhVence: st.nuevaHab.vence, nhAlerta: st.nuevaHab.alerta,
+    setNhNombre: (v: string) => setState(s => ({ nuevaHab: { ...s.nuevaHab, nombre: v } })),
+    setNhNum: (v: string) => setState(s => ({ nuevaHab: { ...s.nuevaHab, num: v } })),
+    setNhVence: (v: string) => setState(s => ({ nuevaHab: { ...s.nuevaHab, vence: v } })),
+    toggleNhAlerta: () => setState(s => ({ nuevaHab: { ...s.nuevaHab, alerta: !s.nuevaHab.alerta } })),
+    crearHabilitacion,
     eliminarEscoltaActual: () => eliminarEscolta(fichaEsc.id),
     volverEquipo: () => setState({ tab: 'equipo', sheet: null }),
 
@@ -475,7 +507,9 @@ export function useApp() {
     refuerzo: st.refuerzo,
     refuerzoNota: st.refuerzo ? 'Te avisaremos de servicios de última hora' : 'No recibirás avisos fuera de tu cuadrante',
     toggleRefuerzo: () => setState(s => ({ refuerzo: !s.refuerzo })),
-    misCerts: CERTS,
+    misCerts: (st.equipo.find(e => e.nombre === 'Marta Ríos')?.certs || []).map(c => ({
+      nombre: c.nombre, num: c.num, vence: c.vence, color: c.alerta ? WARN : MUT,
+    })),
     horasMes: [38, 44, 41, 47, 36, 42, 41, 22].map(h => ({
       alto: Math.round((h / 48) * 100) + '%',
       color: h >= 46 ? WARN : color.accent500,
@@ -625,6 +659,7 @@ export function useApp() {
       : st.sheet === 'historial' ? 'Historial de dotación'
       : st.sheet === 'nuevoEscolta' ? 'Añadir escolta'
       : st.sheet === 'nuevoProtegido' ? 'Añadir protegido'
+      : st.sheet === 'nuevaHabilitacion' ? 'Añadir habilitación'
       : 'Solicitar días',
     sheetSub: st.sheet === 'asignar' ? 'Alberto Ferrán · desde las 19:00 · cena privada'
       : st.sheet === 'nuevo' ? 'Se añade sobre el dispositivo permanente del protegido'
@@ -633,6 +668,7 @@ export function useApp() {
       : st.sheet === 'historial' ? 'Últimos 7 días, según el ciclo 14/7 y las asignaciones actuales'
       : st.sheet === 'nuevoEscolta' ? 'Se añade al equipo como disponible'
       : st.sheet === 'nuevoProtegido' ? 'Se añade con su titular y suplente fijos'
+      : st.sheet === 'nuevaHabilitacion' ? 'Para ' + fichaEsc.nombre
       : 'Cupo máximo: 3 escoltas por semana',
     cerrarSheet: () => setState({ sheet: null }),
 

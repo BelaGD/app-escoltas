@@ -14,7 +14,7 @@ import {
 
 export type Rol = 'coord' | 'escolta';
 export type Tab = 'hoy' | 'cal' | 'vac' | 'prot' | 'equipo' | 'perfil' | 'ficha' | 'notif' | 'ajustes';
-export type Sheet = 'asignar' | 'nuevo' | 'asignacion' | 'detalle' | 'solicitud' | 'historial' | 'nuevoEscolta' | 'nuevoProtegido' | null;
+export type Sheet = 'asignar' | 'nuevo' | 'asignacion' | 'detalle' | 'solicitud' | 'historial' | 'nuevoEscolta' | 'nuevoProtegido' | 'nuevaHabilitacion' | null;
 export type AuthView = 'login' | 'recuperar';
 export type CalVista = 'Semana' | 'Mes' | 'Año';
 
@@ -65,6 +65,7 @@ export interface AppState {
   protegidos: Protegido[];
   nuevoEscoltaNombre: string;
   nuevoProtegido: { nombre: string; rol: string; nivel: string; titular: string; suplente: string; inicio: string; rutina: string };
+  nuevaHab: { nombre: string; num: string; vence: string; alerta: boolean };
   solicitudes: Solicitud[];
   misSolicitudes: MiSolicitud[];
   vacDesde: string;
@@ -108,6 +109,7 @@ export const initialState: AppState = {
   protegidos: PROTEGIDOS_INICIAL,
   nuevoEscoltaNombre: '',
   nuevoProtegido: { nombre: '', rol: '', nivel: 'NIVEL 1', titular: '', suplente: '', inicio: '08:00', rutina: '' },
+  nuevaHab: { nombre: '', num: '', vence: '', alerta: false },
   solicitudes: SOLICITUDES_INICIALES,
   misSolicitudes: MIS_SOLICITUDES_INICIALES,
   vacDesde: '13/10/2026',

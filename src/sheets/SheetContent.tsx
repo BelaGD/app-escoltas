@@ -5,6 +5,7 @@ import { Avatar } from '../components/ui/Avatar';
 import { Field } from '../components/ui/Field';
 import { Btn } from '../components/ui/Button';
 import { ChipRow, Segmented } from '../components/ui/Segmented';
+import { Toggle } from '../components/ui/Toggle';
 import { useApp } from '../logic/useApp';
 
 export function SheetContent() {
@@ -18,6 +19,7 @@ export function SheetContent() {
     case 'historial': return <HistorialSheet />;
     case 'nuevoEscolta': return <NuevoEscoltaSheet />;
     case 'nuevoProtegido': return <NuevoProtegidoSheet />;
+    case 'nuevaHabilitacion': return <NuevaHabilitacionSheet />;
     default: return null;
   }
 }
@@ -225,6 +227,25 @@ function NuevoProtegidoSheet() {
   );
 }
 
+function NuevaHabilitacionSheet() {
+  const app = useApp();
+  return (
+    <View style={{ gap: 14 }}>
+      <Field label="Nombre" value={app.nhNombre} onChangeText={app.setNhNombre} placeholder="Curso de tiro, licencia…" />
+      <Field label="Número / referencia (opcional)" value={app.nhNum} onChangeText={app.setNhNum} placeholder="Nº 12.345" />
+      <Field label="Vigencia" value={app.nhVence} onChangeText={app.setNhVence} placeholder="Vence 12/2027" />
+      <View style={styles.alertaRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.pickNombre}>Marcar como próxima a vencer</Text>
+          <Text style={styles.hint}>Se resalta en la ficha para no perderla de vista</Text>
+        </View>
+        <Toggle on={app.nhAlerta} onTap={app.toggleNhAlerta} />
+      </View>
+      <Btn label="Añadir habilitación" variant="primary" block onPress={app.crearHabilitacion} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   candRow: { flexDirection: 'row', alignItems: 'center', gap: 11, borderWidth: 1, borderColor: color.neutral300, padding: 10 },
   candNombre: { fontSize: 13.5, fontWeight: '600', color: color.text, fontFamily: font.bodySemiBold },
@@ -250,4 +271,5 @@ const styles = StyleSheet.create({
   histN: { fontFamily: font.heading, fontSize: 20 },
   histK: { fontSize: 9, letterSpacing: 0.4, textTransform: 'uppercase', color: color.neutral600, marginTop: 2, textAlign: 'center', fontFamily: font.body },
   histLibres: { fontSize: 11, color: color.neutral700, marginTop: 9, paddingTop: 8, borderTopWidth: 1, borderTopColor: color.neutral200, fontFamily: font.body },
+  alertaRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: color.neutral300, padding: 11 },
 });

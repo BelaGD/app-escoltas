@@ -7,6 +7,7 @@ import { Btn } from '../components/ui/Button';
 import { Tag } from '../components/ui/Tag';
 import { Avatar } from '../components/ui/Avatar';
 import { useApp } from '../logic/useApp';
+import { confirmarEliminar } from '../logic/confirm';
 
 export function Protegidos() {
   const app = useApp();
@@ -26,7 +27,10 @@ export function Protegidos() {
               </View>
               <View style={{ alignItems: 'flex-end', gap: 8 }}>
                 <Tag label={p.estadoTxt} kind={p.tag} />
-                <Pressable onPress={p.onEliminar} hitSlop={8}>
+                <Pressable
+                  onPress={() => confirmarEliminar('Se eliminará a ' + p.nombre + ' y su asignación de titular/suplente.', p.onEliminar)}
+                  hitSlop={8}
+                >
                   <Trash2 size={15} strokeWidth={1.5} color={color.neutral500} />
                 </Pressable>
               </View>

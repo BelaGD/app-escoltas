@@ -122,12 +122,13 @@ function AnioView() {
         {app.calAnio.map((m, i) => (
           <Pressable key={i} onPress={m.onTap} style={styles.anioMes}>
             <Text style={styles.anioMesNombre}>{m.nombre}</Text>
+            <View style={styles.anioMesDivider} />
             <View style={styles.anioMesGrid}>
               {m.dias.map((d, j) => (
-                <View key={j} style={[styles.anioMesDia, { backgroundColor: d.bg }]} />
+                <View key={j} style={[styles.anioMesDia, { backgroundColor: d.bg, borderColor: d.bg === 'transparent' ? 'transparent' : color.neutral300 }]} />
               ))}
             </View>
-            <Text style={styles.anioMesStat}>{m.jornada}j · {m.libranza}l</Text>
+            <Text style={styles.anioMesStat}>{m.jornada} jornada · {m.libranza} libranza</Text>
           </Pressable>
         ))}
       </View>
@@ -168,11 +169,12 @@ const styles = StyleSheet.create({
   legendSwatch: { width: 11, height: 11, borderWidth: 1 },
   legendText: { fontSize: 10.5, color: color.neutral600, fontFamily: font.body },
   resumen: { fontSize: 12, color: color.neutral700, marginTop: 10, fontFamily: font.body },
-  anioTitulo: { fontFamily: font.heading, fontSize: 17, letterSpacing: 1, textTransform: 'uppercase', color: color.text, marginBottom: 10 },
-  anioGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  anioMes: { width: '31%', borderWidth: 1, borderColor: color.neutral300, padding: 7 },
-  anioMesNombre: { fontFamily: font.heading, fontSize: 11, letterSpacing: 1, color: color.neutral700, marginBottom: 5 },
-  anioMesGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  anioMesDia: { width: '14.28%', aspectRatio: 1, margin: 0.5, borderWidth: 0.5, borderColor: color.neutral300 },
-  anioMesStat: { fontSize: 9, color: color.neutral600, marginTop: 5, fontFamily: font.body },
+  anioTitulo: { fontFamily: font.heading, fontSize: 17, letterSpacing: 1, textTransform: 'uppercase', color: color.text, marginBottom: 4 },
+  anioGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 },
+  anioMes: { width: '48%', borderWidth: 1, borderColor: color.neutral300, backgroundColor: color.surface, padding: 12 },
+  anioMesNombre: { fontFamily: font.heading, fontSize: 13, letterSpacing: 1.5, color: color.text },
+  anioMesDivider: { height: 1, backgroundColor: color.neutral200, marginTop: 6, marginBottom: 10 },
+  anioMesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2.5 },
+  anioMesDia: { width: 15, height: 15, borderWidth: 1 },
+  anioMesStat: { fontSize: 10.5, color: color.neutral600, marginTop: 10, fontFamily: font.body },
 });

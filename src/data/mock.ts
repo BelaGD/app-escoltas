@@ -12,6 +12,14 @@ export const HOY = Date.UTC(2026, 8, 12);
 
 export type EstadoEscolta = 'servicio' | 'disponible' | 'descanso' | 'vacaciones';
 
+export interface Cert {
+  id: string;
+  nombre: string;
+  num: string;
+  vence: string;
+  alerta: boolean;
+}
+
 export interface Escolta {
   id: number;
   nombre: string;
@@ -19,9 +27,21 @@ export interface Escolta {
   estado: EstadoEscolta;
   horas: number;
   cli: string;
+  certs: Cert[];
 }
 
-export const EQUIPO_INICIAL: Escolta[] = [
+const CERTS_BASE: Omit<Cert, 'id'>[] = [
+  { nombre: 'TIP habilitación escolta', num: 'Nº 41.882', vence: 'Vence 04/2028', alerta: false },
+  { nombre: 'Licencia de armas tipo C', num: 'Nº C-77 214', vence: 'Vence 11/2026', alerta: true },
+  { nombre: 'Tiro obligatorio', num: '2º semestre', vence: 'Hecho 06/2026', alerta: false },
+  { nombre: 'Primeros auxilios', num: 'Cruz Roja', vence: 'Vence 02/2027', alerta: false },
+];
+function certsIniciales(escoltaId: number): Cert[] {
+  return CERTS_BASE.map((c, i) => ({ ...c, id: escoltaId + '-c' + i }));
+}
+
+type EscoltaSeed = Omit<Escolta, 'certs'>;
+const EQUIPO_SEED: EscoltaSeed[] = [
   { id: 1, nombre: 'Marta Ríos', ini: 'MR', estado: 'servicio', horas: 41, cli: 'Alberto Ferrán' },
   { id: 2, nombre: 'Iván Colmenar', ini: 'IC', estado: 'servicio', horas: 44, cli: 'Alberto Ferrán · relevo' },
   { id: 3, nombre: 'Nuria Palau', ini: 'NP', estado: 'disponible', horas: 28, cli: '' },
@@ -35,6 +55,7 @@ export const EQUIPO_INICIAL: Escolta[] = [
   { id: 11, nombre: 'Óscar Tena', ini: 'OT', estado: 'vacaciones', horas: 0, cli: '' },
   { id: 12, nombre: 'Paula Serna', ini: 'PS', estado: 'disponible', horas: 30, cli: '' },
 ];
+export const EQUIPO_INICIAL: Escolta[] = EQUIPO_SEED.map(e => ({ ...e, certs: certsIniciales(e.id) }));
 
 export const EST: Record<EstadoEscolta, { txt: string; tag: 'accent' | 'outline' | 'neutral' }> = {
   servicio: { txt: 'EN SERVICIO', tag: 'accent' },
@@ -146,12 +167,6 @@ export const CUPO_DATA: [string, number][] = [
   ['1–7', 2], ['8–14', 3], ['15–21', 1], ['22–28', 2], ['29–5', 3], ['6–12', 0],
 ];
 
-export const CERTS = [
-  { nombre: 'TIP habilitación escolta', num: 'Nº 41.882', vence: 'Vence 04/2028', color: MUT },
-  { nombre: 'Licencia de armas tipo C', num: 'Nº C-77 214', vence: 'Vence 11/2026', color: WARN },
-  { nombre: 'Tiro obligatorio', num: '2º semestre', vence: 'Hecho 06/2026', color: MUT },
-  { nombre: 'Primeros auxilios', num: 'Cruz Roja', vence: 'Vence 02/2027', color: MUT },
-];
 
 export interface Notif {
   id: string;

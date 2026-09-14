@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Trash2 } from 'lucide-react-native';
 import { color, font } from '../theme/theme';
 import { Blueprint } from '../components/ui/Blueprint';
 import { Btn } from '../components/ui/Button';
@@ -7,6 +8,7 @@ import { Tag } from '../components/ui/Tag';
 import { Avatar } from '../components/ui/Avatar';
 import { SectionTitle } from '../components/ui/Section';
 import { useApp } from '../logic/useApp';
+import { confirmarEliminar } from '../logic/confirm';
 
 export function Ficha() {
   const app = useApp();
@@ -34,17 +36,25 @@ export function Ficha() {
       </View>
 
       <SectionTitle>Habilitaciones</SectionTitle>
-      <View style={{ gap: 6, marginBottom: 18 }}>
-        {f.certs.map((c, i) => (
-          <View key={i} style={styles.certRow}>
+      <View style={{ gap: 6, marginBottom: 10 }}>
+        {f.certs.map(c => (
+          <View key={c.id} style={styles.certRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.certNombre}>{c.nombre}</Text>
               <Text style={styles.certNum}>{c.num}</Text>
             </View>
             <Text style={[styles.certVence, { color: c.color }]}>{c.vence}</Text>
+            <Pressable
+              onPress={() => confirmarEliminar('Se eliminará "' + c.nombre + '" de las habilitaciones de ' + f.nombre + '.', c.onEliminar)}
+              hitSlop={8}
+            >
+              <Trash2 size={14} strokeWidth={1.5} color={color.neutral500} />
+            </Pressable>
           </View>
         ))}
+        {f.certs.length === 0 && <Text style={styles.certVacio}>Sin habilitaciones registradas.</Text>}
       </View>
+      <Btn label="+ Añadir habilitación" variant="secondary" onPress={app.abrirNuevaHabilitacion} small style={{ marginBottom: 18 }} />
 
       <SectionTitle>Próximos servicios</SectionTitle>
       <View style={{ gap: 6, marginBottom: 20 }}>
@@ -57,7 +67,12 @@ export function Ficha() {
         ))}
       </View>
 
-      <Btn label="Eliminar escolta" variant="secondary" block onPress={app.eliminarEscoltaActual} />
+      <Btn
+        label="Eliminar escolta"
+        variant="secondary"
+        block
+        onPress={() => confirmarEliminar('Se eliminará a ' + f.nombre + ' del equipo. Esta acción no se puede deshacer.', app.eliminarEscoltaActual)}
+      />
     </View>
   );
 }
@@ -75,6 +90,7 @@ const styles = StyleSheet.create({
   certNombre: { fontSize: 13, fontWeight: '500', color: color.text, fontFamily: font.bodyMedium },
   certNum: { fontSize: 11, color: color.neutral600, fontFamily: font.body },
   certVence: { fontSize: 11.5, textAlign: 'right', fontFamily: font.body },
+  certVacio: { fontSize: 12, color: color.neutral600, fontStyle: 'italic', paddingVertical: 6, fontFamily: font.body },
   proxRow: { flexDirection: 'row', gap: 10, borderBottomWidth: 1, borderBottomColor: color.neutral200, paddingVertical: 8, paddingHorizontal: 2 },
   proxCuando: { fontFamily: font.heading, fontSize: 13, minWidth: 74, color: color.text },
   proxCliente: { flex: 1, fontSize: 12.5, color: color.text, fontFamily: font.body },
