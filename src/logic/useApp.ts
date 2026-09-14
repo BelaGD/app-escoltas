@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useStore, AppState, Patch } from '../state/store';
+import { useStore, AppState, Patch, Fichaje } from '../state/store';
 import {
   EST, SEMANA, MESES, DIA_SERV, EST_PROT, CUPO_DATA,
   HOY, WARN, MUT, AC, Escolta, Protegido, ServicioRaw, MiSolicitud, Solicitud,
@@ -547,9 +547,23 @@ export function useApp() {
         { dia: 'Mié', horas: 'Desde 08:00', cliente: 'Consejo de administración', tipo: 'Especial', bar: WARN },
       ],
     },
-    confirmar: () => { setState({ confirmado: true }); flash('Presencia confirmada · 05:58 · Alberto Ferrán'); },
-    confirmarDetalle: () => { setState({ sheet: null, confirmado: true }); flash('Presencia confirmada · 05:58 · Alberto Ferrán'); },
-    cerrarJornada: () => { setState({ cerrado: '20:30' }); flash('Jornada cerrada · 20:30 · 14 h 32 min'); },
+    confirmar: () => {
+      const protegido = (protDe('Marta Ríos') || suplenteDe('Marta Ríos') || { nombre: 'protegido por asignar' }).nombre;
+      setState(s => ({ confirmado: true, fichajes: ([{ id: 'f' + Date.now(), escoltaNombre: 'Marta Ríos', protegido, horaConfirmado: '05:58', horaCierre: null, duracion: null }] as Fichaje[]).concat(s.fichajes) }));
+      flash('Presencia confirmada · 05:58 · ' + protegido);
+    },
+    confirmarDetalle: () => {
+      const protegido = (protDe('Marta Ríos') || suplenteDe('Marta Ríos') || { nombre: 'protegido por asignar' }).nombre;
+      setState(s => ({ sheet: null, confirmado: true, fichajes: ([{ id: 'f' + Date.now(), escoltaNombre: 'Marta Ríos', protegido, horaConfirmado: '05:58', horaCierre: null, duracion: null }] as Fichaje[]).concat(s.fichajes) }));
+      flash('Presencia confirmada · 05:58 · ' + protegido);
+    },
+    cerrarJornada: () => {
+      setState(s => ({
+        cerrado: '20:30',
+        fichajes: s.fichajes.map((f, i) => i === 0 && f.escoltaNombre === 'Marta Ríos' && !f.horaCierre ? { ...f, horaCierre: '20:30', duracion: '14 h 32 min' } : f),
+      }));
+      flash('Jornada cerrada · 20:30 · 14 h 32 min');
+    },
     verDetalleJornada: () => setState({ sheet: 'detalle', detalle: { dia: 12, desde: '06:00', hasta: '20:00', protegido: 'Alberto Ferrán', tipo: 'Jornada fija · residencia, oficina y agenda', dotacion: 'M. Ríos · relevo I. Colmenar', telefono: st.protegidos.find(p => p.nombre === 'Alberto Ferrán')?.telefono } }),
 
     // ---- Vacaciones (escolta) ----
@@ -592,6 +606,10 @@ export function useApp() {
     horasMes: [38, 44, 41, 47, 36, 42, 41, 22].map(h => ({
       alto: Math.round((h / 48) * 100) + '%',
       color: h >= 46 ? WARN : color.accent500,
+    })),
+    misFichajes: st.fichajes.filter(f => f.escoltaNombre === 'Marta Ríos').map(f => ({
+      protegido: f.protegido, horaConfirmado: f.horaConfirmado,
+      horaCierre: f.horaCierre || 'en curso', duracion: f.duracion || '—',
     })),
 
     // ---- Protegidos ----

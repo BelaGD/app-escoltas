@@ -45,6 +45,15 @@ export interface Detalle {
   telefono?: string;
 }
 
+export interface Fichaje {
+  id: string;
+  escoltaNombre: string;
+  protegido: string;
+  horaConfirmado: string;
+  horaCierre: string | null;
+  duracion: string | null;
+}
+
 export interface NuevoServicio {
   dia: number;
   protegido: string;
@@ -99,6 +108,7 @@ export interface AppState {
   authError: string;
   prefs: { servicio: boolean; vacaciones: boolean; silencio: boolean };
   notifs: Notif[];
+  fichajes: Fichaje[];
 }
 
 export const initialState: AppState = {
@@ -145,6 +155,7 @@ export const initialState: AppState = {
   authError: '',
   prefs: { servicio: true, vacaciones: true, silencio: false },
   notifs: NOTIFS_INICIALES,
+  fichajes: [],
 };
 
 export type Patch = Partial<AppState> | ((s: AppState) => Partial<AppState>);

@@ -50,6 +50,20 @@ export function Perfil() {
         <Text style={styles.chartFooterText}>Semana 32</Text>
         <Text style={styles.chartFooterText}>Media 41 h · tope 48 h</Text>
       </View>
+
+      <SectionTitle>Mis fichajes de hoy</SectionTitle>
+      <View style={{ gap: 6 }}>
+        {app.misFichajes.map((f, i) => (
+          <View key={i} style={styles.fichajeRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fichajeProtegido}>{f.protegido}</Text>
+              <Text style={styles.fichajeHoras}>{f.horaConfirmado} → {f.horaCierre}</Text>
+            </View>
+            <Text style={styles.fichajeDuracion}>{f.duracion}</Text>
+          </View>
+        ))}
+        {app.misFichajes.length === 0 && <Text style={styles.fichajeVacio}>Sin fichajes todavía hoy.</Text>}
+      </View>
     </View>
   );
 }
@@ -69,4 +83,9 @@ const styles = StyleSheet.create({
   bar: { flex: 1 },
   chartFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 },
   chartFooterText: { fontSize: 10.5, color: color.neutral600, fontFamily: font.body },
+  fichajeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: color.neutral300, padding: 10 },
+  fichajeProtegido: { fontSize: 13, fontWeight: '600', color: color.text, fontFamily: font.bodySemiBold },
+  fichajeHoras: { fontSize: 11, color: color.neutral600, marginTop: 2, fontFamily: font.body },
+  fichajeDuracion: { fontFamily: font.heading, fontSize: 13, color: color.accent700 },
+  fichajeVacio: { fontSize: 12, color: color.neutral600, fontStyle: 'italic', fontFamily: font.body },
 });
