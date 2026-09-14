@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useStore, AppState, Patch } from '../state/store';
 import {
-  EQUIPO, EST, PROTEGIDOS, SEMANA, MESES, DIA_SERV, EST_PROT, CUPO_DATA, CERTS,
+  EST, SEMANA, MESES, DIA_SERV, EST_PROT, CUPO_DATA, CERTS,
   HOY, WARN, MUT, AC, Escolta, Protegido, ServicioRaw, MiSolicitud,
 } from '../data/mock';
 import { color } from '../theme/theme';
@@ -26,9 +26,9 @@ export function useApp() {
     titular: st.asig[p.id]?.titular || p.titular,
     suplente: st.asig[p.id]?.suplente || p.suplente,
   });
-  const iniDe = (n: string) => EQUIPO.find(x => x.nombre === n)?.ini || n.slice(0, 2).toUpperCase();
-  const protDe = (nombre: string) => PROTEGIDOS.find(p => asigDe(p).titular === nombre);
-  const suplenteDe = (nombre: string) => PROTEGIDOS.find(p => asigDe(p).suplente === nombre);
+  const iniDe = (n: string) => st.equipo.find(x => x.nombre === n)?.ini || n.slice(0, 2).toUpperCase();
+  const protDe = (nombre: string) => st.protegidos.find(p => asigDe(p).titular === nombre);
+  const suplenteDe = (nombre: string) => st.protegidos.find(p => asigDe(p).suplente === nombre);
   const estadoDe = (e: Escolta) => e.estado === 'vacaciones' ? 'vacaciones'
     : !enJornada(HOY, e.nombre) ? 'descanso'
     : protDe(e.nombre) ? 'servicio' : 'disponible';
@@ -69,8 +69,8 @@ export function useApp() {
   };
   const head = heads[tab] || heads.hoy;
   const noLeidas = st.notifs.filter(n => !n.leida).length;
-  const nDisp = EQUIPO.filter(e => estadoDe(e) === 'disponible').length;
-  const nServ = EQUIPO.filter(e => estadoDe(e) === 'servicio').length;
+  const nDisp = st.equipo.filter(e => estadoDe(e) === 'disponible').length;
+  const nServ = st.equipo.filter(e => estadoDe(e) === 'servicio').length;
 
   const navDefs: [string, string][] = coord
     ? [['hoy', 'Hoy'], ['cal', 'Agenda'], ['prot', 'Protegidos'], ['vac', 'Vacac.'], ['equipo', 'Equipo']]
@@ -108,13 +108,13 @@ export function useApp() {
   const filtros = ['Todos', 'Disponibles', 'En servicio', 'Fuera'].map(f => ({
     label: f, on: st.filtro === f, onTap: () => setState({ filtro: f }),
   }));
-  const equipoFiltrado = EQUIPO.filter(e =>
+  const equipoFiltrado = st.equipo.filter(e =>
     st.filtro === 'Todos' ? true
     : st.filtro === 'Disponibles' ? estadoDe(e) === 'disponible'
     : st.filtro === 'En servicio' ? estadoDe(e) === 'servicio'
     : estadoDe(e) === 'descanso' || estadoDe(e) === 'vacaciones');
 
-  const fichaEsc = EQUIPO.find(e => e.id === st.fichaId) || EQUIPO[0];
+  const fichaEsc = st.equipo.find(e => e.id === st.fichaId) || st.equipo[0];
 
   const pend = st.solicitudes.filter(s => s.estado === 'pendiente');
   const res = st.solicitudes.filter(s => s.estado !== 'pendiente');
@@ -129,9 +129,9 @@ export function useApp() {
 
   const dotacionPara = (f: number) => {
     const esHoy = f === HOY;
-    const total = EQUIPO.length;
-    const vac = EQUIPO.filter(e => e.estado === 'vacaciones');
-    const activos = EQUIPO.filter(e => e.estado !== 'vacaciones');
+    const total = st.equipo.length;
+    const vac = st.equipo.filter(e => e.estado === 'vacaciones');
+    const activos = st.equipo.filter(e => e.estado !== 'vacaciones');
     const jorn = activos.filter(e => enJornada(f, e.nombre));
     const conProt = jorn.filter(e => protDe(e.nombre));
     const libres = jorn.filter(e => !protDe(e.nombre));
@@ -176,7 +176,7 @@ export function useApp() {
   });
 
 
-  const protegidosHoy = PROTEGIDOS.map(p => {
+  const protegidosHoy = st.protegidos.map(p => {
     const a = asigDe(p);
     return {
       id: p.id, nombre: p.nombre, titular: a.titular, tit: iniDe(a.titular),
@@ -186,7 +186,7 @@ export function useApp() {
     };
   });
 
-  const candidatos = EQUIPO.filter(e => estadoDe(e) === 'disponible').map(e => ({
+  const candidatos = st.equipo.filter(e => estadoDe(e) === 'disponible').map(e => ({
     ini: e.ini, nombre: e.nombre,
     nota: e.horas > 32 ? e.horas + ' h esta semana · llegaría a ' + (e.horas + 7) + ' h' : e.horas + ' h esta semana · descansó 14 h',
     notaColor: e.horas > 32 ? WARN : MUT,
@@ -197,10 +197,63 @@ export function useApp() {
     },
   }));
 
-  const protActualAsig = PROTEGIDOS.find(p => p.id === st.asigProt) || PROTEGIDOS[0];
+  const protActualAsig = st.protegidos.find(p => p.id === st.asigProt) || st.protegidos[0];
   const asigActual = asigDe(protActualAsig);
 
-  const nvProt = PROTEGIDOS.find(p => p.nombre === st.nuevo.protegido) || PROTEGIDOS[0];
+  // ---- CRUD: equipo y protegidos (solo coordinación) ----
+  const crearEscolta = () => {
+    const nombre = st.nuevoEscoltaNombre.trim();
+    if (!nombre) { flash('Escribe un nombre'); return; }
+    const partes = nombre.split(' ');
+    const ini = (partes[0][0] + (partes[1]?.[0] || '')).toUpperCase();
+    setState(s => ({
+      sheet: null,
+      nuevoEscoltaNombre: '',
+      equipo: s.equipo.concat([{ id: Date.now(), nombre, ini, estado: 'disponible', horas: 0, cli: '' }]),
+    }));
+    flash('Escolta añadido · ' + nombre);
+  };
+  const eliminarEscolta = (id: number) => {
+    const e = st.equipo.find(x => x.id === id);
+    if (!e) return;
+    if (st.equipo.length <= 1) { flash('Debe quedar al menos un escolta en el equipo'); return; }
+    const asignado = protDe(e.nombre) || suplenteDe(e.nombre);
+    if (asignado) { flash('No se puede eliminar: es titular o suplente de ' + asignado.nombre); return; }
+    setState(s => ({ equipo: s.equipo.filter(x => x.id !== id), tab: 'equipo', fichaId: null }));
+    flash('Escolta eliminado · ' + e.nombre);
+  };
+
+  const crearProtegido = () => {
+    const n = st.nuevoProtegido;
+    if (!n.nombre.trim() || !n.titular) { flash('Falta el nombre o el titular'); return; }
+    const id = 'p' + Date.now();
+    setState(s => ({
+      sheet: null,
+      nuevoProtegido: { nombre: '', rol: '', nivel: 'NIVEL 1', titular: '', suplente: '', inicio: '08:00', rutina: '' },
+      protegidos: s.protegidos.concat([{
+        id, nombre: n.nombre.trim(), rol: n.rol.trim() || 'Protegido', nivel: n.nivel,
+        titular: n.titular, tit: iniDe(n.titular), suplente: n.suplente || n.titular,
+        inicio: n.inicio || '08:00',
+        rutina: n.rutina.trim() || ('Presentación ' + (n.inicio || '08:00')),
+        estado: n.suplente ? 'con' : 'relevo',
+      }]),
+    }));
+    flash('Protegido añadido · ' + n.nombre.trim());
+  };
+  const eliminarProtegido = (id: string) => {
+    const p = st.protegidos.find(x => x.id === id);
+    if (!p) return;
+    if (st.protegidos.length <= 1) { flash('Debe quedar al menos un protegido'); return; }
+    setState(s => {
+      const { [id]: _quitado, ...asigResto } = s.asig;
+      return {
+        protegidos: s.protegidos.filter(x => x.id !== id),
+        asig: asigResto,
+        asigProt: s.asigProt === id ? s.protegidos.filter(x => x.id !== id)[0].id : s.asigProt,
+      };
+    });
+    flash('Protegido eliminado · ' + p.nombre);
+  };
 
   return {
     coord, isEscolta: !coord, tab, head, noLeidas, hayNoLeidas: noLeidas > 0,
@@ -224,7 +277,7 @@ export function useApp() {
     protegidosHoy,
     servHoy,
     serviciosMeta: servHoy.filter(s => s.estado === 'CUBIERTO').length + ' de ' + servHoy.length + ' cubiertos',
-    disponibles: EQUIPO.filter(e => estadoDe(e) === 'disponible').map(e => ({
+    disponibles: st.equipo.filter(e => estadoDe(e) === 'disponible').map(e => ({
       ini: e.ini, nombre: e.nombre, nota: 'En jornada · sin protegido fijo', horas: e.horas + ' h / sem',
     })),
 
@@ -244,7 +297,7 @@ export function useApp() {
     calVista: st.calVista,
     setCalVista: (v: AppState['calVista']) => setState({ calVista: v }),
     calEscolta: st.calEscolta,
-    calEscoltas: EQUIPO.map(e => ({ label: e.nombre.split(' ')[0], nombre: e.nombre, on: st.calEscolta === e.nombre, onTap: () => setState({ calEscolta: e.nombre }) })),
+    calEscoltas: st.equipo.map(e => ({ label: e.nombre.split(' ')[0], nombre: e.nombre, on: st.calEscolta === e.nombre, onTap: () => setState({ calEscolta: e.nombre }) })),
     calMesNombre: MESES[st.calMes] + ' 2026',
     calMesPrev: () => setState(s => ({ calMes: (s.calMes + 11) % 12 })),
     calMesNext: () => setState(s => ({ calMes: (s.calMes + 1) % 12 })),
@@ -283,9 +336,18 @@ export function useApp() {
       const primero = new Date(Date.UTC(2026, m, 1)).getUTCDay();
       const hueco = (primero + 6) % 7;
       const dias: { bg: string }[] = [];
+      let jornada = 0;
       for (let i = 0; i < hueco; i++) dias.push({ bg: 'transparent' });
-      for (let d = 1; d <= total; d++) dias.push({ bg: enJornada(Date.UTC(2026, m, d), st.calEscolta) ? color.accent500 : color.neutral200 });
-      return { nombre: nombre.slice(0, 3).toUpperCase(), dias, onTap: () => setState({ calMes: m, calVista: 'Mes' }) };
+      for (let d = 1; d <= total; d++) {
+        const work = enJornada(Date.UTC(2026, m, d), st.calEscolta);
+        if (work) jornada++;
+        dias.push({ bg: work ? color.accent500 : color.neutral200 });
+      }
+      return {
+        nombre: nombre.slice(0, 3).toUpperCase(),
+        dias, jornada, libranza: total - jornada,
+        onTap: () => setState({ calMes: m, calVista: 'Mes' }),
+      };
     }),
     calAnioResumen: (() => {
       let j = 0;
@@ -323,6 +385,10 @@ export function useApp() {
       iniBorder: estadoDe(e) === 'servicio' ? color.accent700 : color.neutral400,
       onTap: () => setState({ tab: 'ficha', fichaId: e.id }),
     })),
+    abrirNuevoEscolta: () => setState({ sheet: 'nuevoEscolta' }),
+    nuevoEscoltaNombre: st.nuevoEscoltaNombre,
+    setNuevoEscoltaNombre: (v: string) => setState({ nuevoEscoltaNombre: v }),
+    crearEscolta,
     ficha: {
       ini: fichaEsc.ini, nombre: fichaEsc.nombre,
       puesto: 'Escolta · TIP 41.882 · Delegación Centro',
@@ -339,6 +405,7 @@ export function useApp() {
         { cuando: 'MAR 06:00', cliente: 'Alberto Ferrán · jornada', horas: 'est. 14 h' },
       ],
     },
+    eliminarEscoltaActual: () => eliminarEscolta(fichaEsc.id),
     volverEquipo: () => setState({ tab: 'equipo', sheet: null }),
 
     // ---- Hoy (escolta) ----
@@ -415,7 +482,7 @@ export function useApp() {
     })),
 
     // ---- Protegidos ----
-    protegidos: PROTEGIDOS.map(p => {
+    protegidos: st.protegidos.map(p => {
       const a = asigDe(p);
       return {
         id: p.id, nombre: p.nombre, rol: p.rol, nivel: p.nivel, rutina: p.rutina,
@@ -425,15 +492,40 @@ export function useApp() {
         eventos: SEMANA.reduce((n, d) => n + serviciosDe(d.num).filter(s => s[2] === p.nombre).length, 0) + ' esta semana',
         onTap: () => setState({ sheet: 'asignacion', asigProt: p.id }),
         onNuevo: () => setState(s => ({ sheet: 'nuevo', nuevo: { ...s.nuevo, protegido: p.nombre, dotacion: [corto(a.titular)] } })),
+        onEliminar: () => eliminarProtegido(p.id),
       };
     }),
+    abrirNuevoProtegido: () => setState({ sheet: 'nuevoProtegido' }),
+    npNombre: st.nuevoProtegido.nombre, npRol: st.nuevoProtegido.rol, npInicio: st.nuevoProtegido.inicio, npRutina: st.nuevoProtegido.rutina,
+    setNpNombre: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, nombre: v } })),
+    setNpRol: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, rol: v } })),
+    setNpInicio: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, inicio: v } })),
+    setNpRutina: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, rutina: v } })),
+    npNiveles: ['NIVEL 1', 'NIVEL 2', 'NIVEL 3'].map(n => ({
+      label: n, on: st.nuevoProtegido.nivel === n,
+      onTap: () => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, nivel: n } })),
+    })),
+    npTitulares: st.equipo.map(e => ({
+      nombre: e.nombre, ini: e.ini, on: st.nuevoProtegido.titular === e.nombre,
+      bg: st.nuevoProtegido.titular === e.nombre ? color.accent200 : 'transparent',
+      borde: st.nuevoProtegido.titular === e.nombre ? color.accent700 : color.neutral300,
+      onTap: () => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, titular: e.nombre } })),
+    })),
+    npSuplentes: st.equipo.map(e => ({
+      nombre: e.nombre, on: st.nuevoProtegido.suplente === e.nombre,
+      onTap: () => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, suplente: e.nombre } })),
+    })),
+    npResumen: (st.nuevoProtegido.nombre || 'Nuevo protegido') + ' · ' + st.nuevoProtegido.nivel
+      + (st.nuevoProtegido.titular ? ' · titular ' + st.nuevoProtegido.titular : ' · sin titular')
+      + (st.nuevoProtegido.suplente ? ' · suplente ' + st.nuevoProtegido.suplente : ''),
+    crearProtegido,
 
     // ---- Sheet: cubrir servicio ----
     candidatos,
 
     // ---- Sheet: asignación permanente ----
     asigProtNombre: protActualAsig.nombre,
-    asigTitulares: EQUIPO.map(e => {
+    asigTitulares: st.equipo.map(e => {
       const on = asigActual.titular === e.nombre;
       return {
         nombre: e.nombre, ini: e.ini, on,
@@ -442,7 +534,7 @@ export function useApp() {
         onTap: () => setState(s => ({ asig: { ...s.asig, [protActualAsig.id]: { titular: e.nombre, suplente: s.asig[protActualAsig.id]?.suplente || protActualAsig.suplente } } })),
       };
     }),
-    asigSuplentes: EQUIPO.map(e => {
+    asigSuplentes: st.equipo.map(e => {
       const on = asigActual.suplente === e.nombre;
       return {
         nombre: e.nombre, ini: e.ini, on,
@@ -468,12 +560,12 @@ export function useApp() {
     mostrarFab: coord && (tab === 'hoy' || tab === 'cal' || tab === 'prot'),
     abrirNuevo: () => setState({ sheet: 'nuevo' }),
     nvDias: SEMANA.map(d => ({ label: d.dia + ' ' + d.num, on: st.nuevo.dia === d.num, onTap: () => setState(s => ({ nuevo: { ...s.nuevo, dia: d.num } })) })),
-    nvProtegidos: PROTEGIDOS.map(p => ({ label: p.nombre, on: st.nuevo.protegido === p.nombre, onTap: () => setState(s => ({ nuevo: { ...s.nuevo, protegido: p.nombre } })) })),
+    nvProtegidos: st.protegidos.map(p => ({ label: p.nombre, on: st.nuevo.protegido === p.nombre, onTap: () => setState(s => ({ nuevo: { ...s.nuevo, protegido: p.nombre } })) })),
     nvTipos: ['Evento', 'Traslado', 'Viaje', 'Refuerzo'].map(t => ({ label: t, on: st.nuevo.tipo === t, onTap: () => setState(s => ({ nuevo: { ...s.nuevo, tipo: t } })) })),
     nvDesde: st.nuevo.desde, nvLugar: st.nuevo.lugar,
     setNvDesde: (v: string) => setState(s => ({ nuevo: { ...s.nuevo, desde: v } })),
     setNvLugar: (v: string) => setState(s => ({ nuevo: { ...s.nuevo, lugar: v } })),
-    nvDotacion: EQUIPO.map(e => {
+    nvDotacion: st.equipo.map(e => {
       const c = corto(e.nombre);
       const on = st.nuevo.dotacion.indexOf(c) >= 0;
       return {
@@ -522,7 +614,7 @@ export function useApp() {
       { k: 'Dispositivo', v: 'Pixel 8 · corporativo' },
       { k: 'Rol', v: coord ? 'Coordinación' : 'Escolta' },
     ],
-    cerrarSesion: () => setState({ sesion: false, authView: 'login', tab: 'hoy', pass: '', codigo: '', authError: '' }),
+    cerrarSesion: () => setState({ sesion: false, authView: 'login', tab: 'hoy', pass: '', authError: '' }),
 
     // ---- Bottom sheet chrome ----
     sheet: st.sheet,
@@ -531,44 +623,40 @@ export function useApp() {
       : st.sheet === 'asignacion' ? 'Asignación permanente'
       : st.sheet === 'detalle' ? 'Detalle del servicio'
       : st.sheet === 'historial' ? 'Historial de dotación'
+      : st.sheet === 'nuevoEscolta' ? 'Añadir escolta'
+      : st.sheet === 'nuevoProtegido' ? 'Añadir protegido'
       : 'Solicitar días',
     sheetSub: st.sheet === 'asignar' ? 'Alberto Ferrán · desde las 19:00 · cena privada'
       : st.sheet === 'nuevo' ? 'Se añade sobre el dispositivo permanente del protegido'
       : st.sheet === 'asignacion' ? 'Titular y suplente de ' + protActualAsig.nombre
       : st.sheet === 'detalle' ? (st.detalle ? st.detalle.protegido + ' · desde las ' + st.detalle.desde : '')
       : st.sheet === 'historial' ? 'Últimos 7 días, según el ciclo 14/7 y las asignaciones actuales'
+      : st.sheet === 'nuevoEscolta' ? 'Se añade al equipo como disponible'
+      : st.sheet === 'nuevoProtegido' ? 'Se añade con su titular y suplente fijos'
       : 'Cupo máximo: 3 escoltas por semana',
     cerrarSheet: () => setState({ sheet: null }),
 
     // ---- Auth ----
     sesion: st.sesion,
     authView: st.authView,
-    authKicker: st.authView === 'codigo' ? 'Verificación en dos pasos' : st.authView === 'recuperar' ? 'Recuperar acceso' : 'Control de servicios',
-    authTitulo: st.authView === 'codigo' ? 'Código' : st.authView === 'recuperar' ? 'Acceso' : 'Relevo',
-    authSub: st.authView === 'codigo'
-      ? 'Introduce el código de 6 dígitos enviado al ' + (st.tip ? '•••' + st.tip.slice(-3) : 'teléfono registrado') + '.'
-      : st.authView === 'recuperar'
-        ? 'Te enviaremos un enlace de restablecimiento al correo corporativo asociado a tu TIP.'
-        : 'Accede con tu número TIP para consultar cuadrantes, disponibilidad y vacaciones.',
+    authKicker: st.authView === 'recuperar' ? 'Recuperar acceso' : 'Control de servicios',
+    authTitulo: st.authView === 'recuperar' ? 'Acceso' : 'Relevo',
+    authSub: st.authView === 'recuperar'
+      ? 'Te enviaremos un enlace de restablecimiento al correo corporativo asociado a tu TIP.'
+      : 'Accede con tu número TIP para consultar cuadrantes, disponibilidad y vacaciones.',
     tip: st.tip, pass: st.pass, correo: st.correo, authError: st.authError,
     setTip: (v: string) => setState({ tip: v, authError: '' }),
     setPass: (v: string) => setState({ pass: v, authError: '' }),
     setCorreo: (v: string) => setState({ correo: v }),
     entrar: () => {
       if (!st.tip || !st.pass) { setState({ authError: 'Introduce tu número TIP y tu contraseña.' }); return; }
-      setState({ authView: 'codigo', codigo: '' });
+      setState({ sesion: true, tab: 'hoy' });
+      flash('Bienvenida, ' + (coord ? 'Carlos' : 'Marta'));
     },
     entrarHuella: () => { setState({ sesion: true, tab: 'hoy' }); flash('Sesión iniciada con huella'); },
     irRecuperar: () => setState({ authView: 'recuperar', authError: '' }),
-    volverLogin: () => setState({ authView: 'login', authError: '', codigo: '' }),
+    volverLogin: () => setState({ authView: 'login', authError: '' }),
     enviarRecuperacion: () => { setState({ authView: 'login' }); flash('Enlace enviado al correo corporativo'); },
-    codigo: st.codigo,
-    tocarTecla: (t: string) => {
-      if (t === '⌫') { setState(s => ({ codigo: s.codigo.slice(0, -1) })); return; }
-      const next = (st.codigo + t).slice(0, 6);
-      if (next.length === 6) { setState({ codigo: next, sesion: true, tab: 'hoy' }); flash('Bienvenida, ' + (coord ? 'Carlos' : 'Marta')); }
-      else setState({ codigo: next });
-    },
 
     toast: st.toast,
   };

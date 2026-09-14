@@ -24,9 +24,7 @@ export function DateField({
       mode: 'date',
       minimumDate: MIN_DATE,
       maximumDate: MAX_DATE,
-      onChange: (event, selected) => {
-        if (event.type === 'set' && selected) onChange(localDateToIso(selected));
-      },
+      onValueChange: (_event, selected) => onChange(localDateToIso(selected)),
     });
   };
 

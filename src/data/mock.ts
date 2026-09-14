@@ -21,7 +21,7 @@ export interface Escolta {
   cli: string;
 }
 
-export const EQUIPO: Escolta[] = [
+export const EQUIPO_INICIAL: Escolta[] = [
   { id: 1, nombre: 'Marta Ríos', ini: 'MR', estado: 'servicio', horas: 41, cli: 'Alberto Ferrán' },
   { id: 2, nombre: 'Iván Colmenar', ini: 'IC', estado: 'servicio', horas: 44, cli: 'Alberto Ferrán · relevo' },
   { id: 3, nombre: 'Nuria Palau', ini: 'NP', estado: 'disponible', horas: 28, cli: '' },
@@ -68,7 +68,7 @@ export interface Protegido {
   estado: EstadoProtegido;
 }
 
-export const PROTEGIDOS: Protegido[] = [
+export const PROTEGIDOS_INICIAL: Protegido[] = [
   { id: 'p1', nombre: 'Alberto Ferrán', rol: 'Principal · Grupo Ferrán', nivel: 'NIVEL 3', titular: 'Marta Ríos', tit: 'MR', suplente: 'Iván Colmenar', inicio: '06:00', rutina: 'Presentación 06:00 · residencia, oficina y agenda', estado: 'con' },
   { id: 'p2', nombre: 'Carmen Rivas', rol: 'Cónyuge', nivel: 'NIVEL 2', titular: 'Elena Bustos', tit: 'EB', suplente: 'Nuria Palau', inicio: '08:30', rutina: 'Presentación 08:30 · fundación y agenda social', estado: 'con' },
   { id: 'p3', nombre: 'Elisa Ferrán', rol: 'Hija · 14 años', nivel: 'NIVEL 2', titular: 'Lucía Vega', tit: 'LV', suplente: 'Paula Serna', inicio: '07:15', rutina: 'Presentación 07:15 · colegio y extraescolares', estado: 'relevo' },

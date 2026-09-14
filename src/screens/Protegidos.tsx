@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Trash2 } from 'lucide-react-native';
 import { color, font } from '../theme/theme';
 import { Blueprint } from '../components/ui/Blueprint';
 import { Btn } from '../components/ui/Button';
@@ -12,6 +13,7 @@ export function Protegidos() {
 
   return (
     <View>
+      <Btn label="+ Añadir protegido" variant="primary" block onPress={app.abrirNuevoProtegido} style={{ marginBottom: 14 }} />
       <Text style={styles.intro}>Cada miembro tiene escolta titular asignado toda la jornada. Los servicios especiales se añaden sobre esta base.</Text>
       <View style={{ gap: 10 }}>
         {app.protegidos.map(p => (
@@ -22,7 +24,12 @@ export function Protegidos() {
                 <Text style={styles.nombre}>{p.nombre}</Text>
                 <Text style={styles.rol}>{p.rol}</Text>
               </View>
-              <Tag label={p.estadoTxt} kind={p.tag} />
+              <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                <Tag label={p.estadoTxt} kind={p.tag} />
+                <Pressable onPress={p.onEliminar} hitSlop={8}>
+                  <Trash2 size={15} strokeWidth={1.5} color={color.neutral500} />
+                </Pressable>
+              </View>
             </View>
             <View style={styles.asigRow}>
               <Avatar ini={p.tit} size={30} />

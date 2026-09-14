@@ -1,17 +1,21 @@
 import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
 import {
+  Escolta,
+  EQUIPO_INICIAL,
   MIS_SOLICITUDES_INICIALES,
   MiSolicitud,
   NOTIFS_INICIALES,
   Notif,
+  Protegido,
+  PROTEGIDOS_INICIAL,
   Solicitud,
   SOLICITUDES_INICIALES,
 } from '../data/mock';
 
 export type Rol = 'coord' | 'escolta';
 export type Tab = 'hoy' | 'cal' | 'vac' | 'prot' | 'equipo' | 'perfil' | 'ficha' | 'notif' | 'ajustes';
-export type Sheet = 'asignar' | 'nuevo' | 'asignacion' | 'detalle' | 'solicitud' | 'historial' | null;
-export type AuthView = 'login' | 'codigo' | 'recuperar';
+export type Sheet = 'asignar' | 'nuevo' | 'asignacion' | 'detalle' | 'solicitud' | 'historial' | 'nuevoEscolta' | 'nuevoProtegido' | null;
+export type AuthView = 'login' | 'recuperar';
 export type CalVista = 'Semana' | 'Mes' | 'Año';
 
 export interface ServicioExtra {
@@ -57,6 +61,10 @@ export interface AppState {
   sheet: Sheet;
   toast: string;
   cubierto: string | null;
+  equipo: Escolta[];
+  protegidos: Protegido[];
+  nuevoEscoltaNombre: string;
+  nuevoProtegido: { nombre: string; rol: string; nivel: string; titular: string; suplente: string; inicio: string; rutina: string };
   solicitudes: Solicitud[];
   misSolicitudes: MiSolicitud[];
   vacDesde: string;
@@ -82,7 +90,6 @@ export interface AppState {
   pass: string;
   correo: string;
   authError: string;
-  codigo: string;
   idioma: string;
   prefs: { servicio: boolean; vacaciones: boolean; silencio: boolean };
   notifs: Notif[];
@@ -97,6 +104,10 @@ export const initialState: AppState = {
   sheet: null,
   toast: '',
   cubierto: null,
+  equipo: EQUIPO_INICIAL,
+  protegidos: PROTEGIDOS_INICIAL,
+  nuevoEscoltaNombre: '',
+  nuevoProtegido: { nombre: '', rol: '', nivel: 'NIVEL 1', titular: '', suplente: '', inicio: '08:00', rutina: '' },
   solicitudes: SOLICITUDES_INICIALES,
   misSolicitudes: MIS_SOLICITUDES_INICIALES,
   vacDesde: '13/10/2026',
@@ -122,7 +133,6 @@ export const initialState: AppState = {
   pass: '',
   correo: '',
   authError: '',
-  codigo: '',
   idioma: 'Español',
   prefs: { servicio: true, vacaciones: true, silencio: false },
   notifs: NOTIFS_INICIALES,

@@ -47,7 +47,7 @@ export function Ficha() {
       </View>
 
       <SectionTitle>Próximos servicios</SectionTitle>
-      <View style={{ gap: 6 }}>
+      <View style={{ gap: 6, marginBottom: 20 }}>
         {f.proximos.map((p, i) => (
           <View key={i} style={styles.proxRow}>
             <Text style={styles.proxCuando}>{p.cuando}</Text>
@@ -56,6 +56,8 @@ export function Ficha() {
           </View>
         ))}
       </View>
+
+      <Btn label="Eliminar escolta" variant="secondary" block onPress={app.eliminarEscoltaActual} />
     </View>
   );
 }

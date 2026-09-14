@@ -114,6 +114,10 @@ function AnioView() {
       <ChipRow options={app.calEscoltas} />
       <View style={{ height: 12 }} />
       <Text style={styles.anioTitulo}>2026 · ciclo 14/7</Text>
+      <View style={styles.legendRow}>
+        <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: color.accent500 }]} /><Text style={styles.legendText}>Jornada</Text></View>
+        <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: color.neutral200 }]} /><Text style={styles.legendText}>Libranza</Text></View>
+      </View>
       <View style={styles.anioGrid}>
         {app.calAnio.map((m, i) => (
           <Pressable key={i} onPress={m.onTap} style={styles.anioMes}>
@@ -123,6 +127,7 @@ function AnioView() {
                 <View key={j} style={[styles.anioMesDia, { backgroundColor: d.bg }]} />
               ))}
             </View>
+            <Text style={styles.anioMesStat}>{m.jornada}j · {m.libranza}l</Text>
           </Pressable>
         ))}
       </View>
@@ -168,5 +173,6 @@ const styles = StyleSheet.create({
   anioMes: { width: '31%', borderWidth: 1, borderColor: color.neutral300, padding: 7 },
   anioMesNombre: { fontFamily: font.heading, fontSize: 11, letterSpacing: 1, color: color.neutral700, marginBottom: 5 },
   anioMesGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  anioMesDia: { width: '14.28%', aspectRatio: 1, margin: 0.5 },
+  anioMesDia: { width: '14.28%', aspectRatio: 1, margin: 0.5, borderWidth: 0.5, borderColor: color.neutral300 },
+  anioMesStat: { fontSize: 9, color: color.neutral600, marginTop: 5, fontFamily: font.body },
 });

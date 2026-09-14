@@ -37,34 +37,6 @@ export function AuthScreen() {
           </View>
         )}
 
-        {app.authView === 'codigo' && (
-          <View style={styles.form}>
-            <View style={styles.digitsRow}>
-              {[0, 1, 2, 3, 4, 5].map(i => (
-                <View
-                  key={i}
-                  style={[styles.digit, { borderColor: i === app.codigo.length ? color.accent700 : color.neutral300 }]}
-                >
-                  <Text style={styles.digitText}>{app.codigo[i] || ''}</Text>
-                </View>
-              ))}
-            </View>
-            <View style={styles.keypad}>
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((t, i) => (
-                <Pressable
-                  key={i}
-                  disabled={!t}
-                  onPress={() => app.tocarTecla(t)}
-                  style={[styles.key, !t && styles.keyEmpty]}
-                >
-                  <Text style={styles.keyLabel}>{t}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <Btn label="Volver" variant="ghost" block small onPress={app.volverLogin} />
-          </View>
-        )}
-
         {app.authView === 'recuperar' && (
           <View style={styles.form}>
             <Field label="Número TIP" value={app.tip} onChangeText={app.setTip} placeholder="41882" keyboardType="number-pad" />
@@ -96,12 +68,5 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 12, color: color.warn, fontFamily: font.body },
   huella: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: color.divider, paddingVertical: 10, marginTop: 7 },
   huellaLabel: { fontFamily: font.heading, fontSize: 14, color: color.text },
-  digitsRow: { flexDirection: 'row', gap: 7 },
-  digit: { flex: 1, height: 52, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  digitText: { fontFamily: font.heading, fontSize: 24, color: color.text },
-  keypad: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  key: { width: '31.5%', height: 46, borderWidth: 1, borderColor: color.neutral300, alignItems: 'center', justifyContent: 'center' },
-  keyEmpty: { borderColor: 'transparent' },
-  keyLabel: { fontFamily: font.heading, fontSize: 19, color: color.text },
   footer: { marginTop: 'auto', paddingVertical: 20, fontSize: 10.5, lineHeight: 15, color: color.neutral500, fontFamily: font.body },
 });

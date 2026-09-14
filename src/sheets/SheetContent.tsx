@@ -16,6 +16,8 @@ export function SheetContent() {
     case 'nuevo': return <NuevoSheet />;
     case 'solicitud': return <SolicitudSheet />;
     case 'historial': return <HistorialSheet />;
+    case 'nuevoEscolta': return <NuevoEscoltaSheet />;
+    case 'nuevoProtegido': return <NuevoProtegidoSheet />;
     default: return null;
   }
 }
@@ -175,6 +177,50 @@ function HistorialSheet() {
           <Text style={styles.histLibres} numberOfLines={2}>{d.libresNombres}</Text>
         </View>
       ))}
+    </View>
+  );
+}
+
+function NuevoEscoltaSheet() {
+  const app = useApp();
+  return (
+    <View style={{ gap: 14 }}>
+      <Field label="Nombre completo" value={app.nuevoEscoltaNombre} onChangeText={app.setNuevoEscoltaNombre} placeholder="Nombre Apellido" />
+      <View style={styles.summaryBox}><Text style={styles.summaryText}>Se añade al equipo como disponible, sin protegido ni horas registradas todavía.</Text></View>
+      <Btn label="Añadir escolta" variant="primary" block onPress={app.crearEscolta} />
+    </View>
+  );
+}
+
+function NuevoProtegidoSheet() {
+  const app = useApp();
+  return (
+    <View style={{ gap: 14 }}>
+      <Field label="Nombre completo" value={app.npNombre} onChangeText={app.setNpNombre} placeholder="Nombre Apellido" />
+      <Field label="Rol / relación" value={app.npRol} onChangeText={app.setNpRol} placeholder="Cónyuge, hijo, madre…" />
+      <View>
+        <Text style={styles.label}>Nivel</Text>
+        <Segmented options={app.npNiveles} small />
+      </View>
+      <View>
+        <Text style={styles.label}>Escolta titular</Text>
+        <View style={{ gap: 5 }}>
+          {app.npTitulares.map((t, i) => (
+            <Pressable key={i} onPress={t.onTap} style={[styles.pickRow, { borderColor: t.borde, backgroundColor: t.bg }]}>
+              <Avatar ini={t.ini} size={26} />
+              <Text style={styles.pickNombre}>{t.nombre}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+      <View>
+        <Text style={styles.label}>Suplente</Text>
+        <ChipRow options={app.npSuplentes.map(s => ({ label: s.nombre, on: s.on, onTap: s.onTap }))} />
+      </View>
+      <Field label="Hora de presentación" value={app.npInicio} onChangeText={app.setNpInicio} placeholder="08:00" />
+      <Field label="Rutina (opcional)" value={app.npRutina} onChangeText={app.setNpRutina} placeholder="Presentación 08:00 · domicilio y agenda" />
+      <View style={styles.summaryBox}><Text style={styles.summaryText}>{app.npResumen}</Text></View>
+      <Btn label="Añadir protegido" variant="primary" block onPress={app.crearProtegido} />
     </View>
   );
 }
