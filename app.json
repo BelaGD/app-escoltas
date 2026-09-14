@@ -22,6 +22,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3e1613cb-550b-4b4f-bc27-ca8ab3fbbcc8"
+      }
+    },
+    "owner": "belagd"
   }
 }
