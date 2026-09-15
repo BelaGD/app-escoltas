@@ -31,7 +31,7 @@ export function HoyCoord() {
         </View>
         <View style={{ gap: 9, marginTop: 12 }}>
           {dotacion.filas.map((f, i) => (
-            <View key={i}>
+            <Pressable key={i} onPress={f.onTap}>
               <View style={styles.filaRow}>
                 <Text style={[styles.filaN, { color: f.color }]}>{f.n}</Text>
                 <Text style={styles.filaK}>{f.k}</Text>
@@ -40,7 +40,7 @@ export function HoyCoord() {
               <View style={styles.bar}>
                 <View style={[styles.barFill, { width: f.w as any, backgroundColor: f.barra }]} />
               </View>
-            </View>
+            </Pressable>
           ))}
         </View>
         <Text style={styles.libres}>{dotacion.libresNombres}</Text>

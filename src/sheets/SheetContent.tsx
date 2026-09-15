@@ -24,6 +24,8 @@ export function SheetContent() {
     case 'nuevoProtegido': return <NuevoProtegidoSheet />;
     case 'nuevaHabilitacion': return <NuevaHabilitacionSheet />;
     case 'editarProtegido': return <EditarProtegidoSheet />;
+    case 'dotacionDetalle': return <DotacionDetalleSheet />;
+    case 'editarJornada': return <EditarJornadaSheet />;
     default: return null;
   }
 }
@@ -199,7 +201,8 @@ function NuevoEscoltaSheet() {
   return (
     <View style={{ gap: 14 }}>
       <Field label="Nombre completo" value={app.nuevoEscoltaNombre} onChangeText={app.setNuevoEscoltaNombre} placeholder="Nombre Apellido" />
-      <View style={styles.summaryBox}><Text style={styles.summaryText}>Se añade al equipo como disponible, sin protegido ni horas registradas todavía.</Text></View>
+      <DateField label="Un día en que empiece su jornada (ciclo 14/7)" value={app.nuevoEscoltaInicio} onChange={app.setNuevoEscoltaInicio} />
+      <View style={styles.summaryBox}><Text style={styles.summaryText}>Se añade al equipo como disponible, sin protegido ni horas registradas todavía. El resto del año del ciclo 14/7 se calcula solo a partir de esa fecha.</Text></View>
       <Btn label="Añadir escolta" variant="primary" block onPress={app.crearEscolta} />
     </View>
   );
@@ -271,6 +274,41 @@ function EditarProtegidoSheet() {
       <Field label="Rutina" value={app.epRutina} onChangeText={app.setEpRutina} />
       <Field label="Teléfono de contacto" value={app.epTelefono} onChangeText={app.setEpTelefono} placeholder="+34 611 220 000" keyboardType="phone-pad" />
       <Btn label="Guardar cambios" variant="primary" block onPress={app.guardarEdicionProtegido} />
+    </View>
+  );
+}
+
+function DotacionDetalleSheet() {
+  const app = useApp();
+  return (
+    <View style={{ gap: 6 }}>
+      {app.dotacionDetalleLista.map((e, i) => (
+        <View key={i} style={styles.candRow}>
+          <Avatar ini={e.nombre.split(' ').map(p => p[0]).slice(0, 2).join('')} size={30} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.candNombre}>{e.nombre}</Text>
+            <Text style={styles.candNota}>{e.extra}</Text>
+          </View>
+        </View>
+      ))}
+      {app.dotacionDetalleLista.length === 0 && (
+        <View style={styles.summaryBox}><Text style={styles.summaryText}>Nadie en esta categoría para la fecha consultada.</Text></View>
+      )}
+    </View>
+  );
+}
+
+function EditarJornadaSheet() {
+  const app = useApp();
+  return (
+    <View style={{ gap: 14 }}>
+      <DateField label="Un día en que empiece jornada" value={app.editarJornadaFecha} onChange={app.setEditarJornadaFecha} />
+      <View style={styles.summaryBox}>
+        <Text style={styles.summaryText}>
+          Cualquier fecha en la que ese día sea el primero de un bloque de 14 días de jornada. El ciclo 14/7 completo del resto del año se recalcula solo — no hace falta volver a tocarlo salvo que el patrón real cambie.
+        </Text>
+      </View>
+      <Btn label="Guardar ciclo" variant="primary" block onPress={app.guardarJornada} />
     </View>
   );
 }

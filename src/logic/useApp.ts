@@ -6,7 +6,7 @@ import {
 } from '../data/mock';
 import { color } from '../theme/theme';
 import { diaCiclo, enJornada } from './ciclo';
-import { dmyToLocalDate } from './date';
+import { dmyToLocalDate, formatIsoShort } from './date';
 
 export type TagKind = 'accent' | 'outline' | 'neutral';
 
@@ -28,11 +28,12 @@ export function useApp() {
     suplente: st.asig[p.id]?.suplente || p.suplente,
   });
   const iniDe = (n: string) => st.equipo.find(x => x.nombre === n)?.ini || n.slice(0, 2).toUpperCase();
+  const inicioDe = (nombre: string) => st.equipo.find(x => x.nombre === nombre)?.inicioJornada || '2026-01-01';
   const protDe = (nombre: string) => st.protegidos.find(p => asigDe(p).titular === nombre);
   const suplenteDe = (nombre: string) => st.protegidos.find(p => asigDe(p).suplente === nombre);
   const estadoDe = (e: Escolta) => e.estado === 'vacaciones' ? 'vacaciones'
     : e.estado === 'baja' ? 'baja'
-    : !enJornada(HOY, e.nombre) ? 'descanso'
+    : !enJornada(HOY, e.inicioJornada) ? 'descanso'
     : protDe(e.nombre) ? 'servicio' : 'disponible';
 
   const coord = st.rol === 'coord';
@@ -146,36 +147,53 @@ export function useApp() {
     const vac = st.equipo.filter(e => e.estado === 'vacaciones');
     const baja = st.equipo.filter(e => e.estado === 'baja');
     const activos = st.equipo.filter(e => e.estado !== 'vacaciones' && e.estado !== 'baja');
-    const jorn = activos.filter(e => enJornada(f, e.nombre));
+    const jorn = activos.filter(e => enJornada(f, e.inicioJornada));
     const conProt = jorn.filter(e => protDe(e.nombre));
     const libres = jorn.filter(e => !protDe(e.nombre));
-    const libranza = activos.filter(e => !enJornada(f, e.nombre));
+    const libranza = activos.filter(e => !enJornada(f, e.inicioJornada));
     return { esHoy, total, vac, baja, conProt, libres, libranza };
   };
 
-  const dotacion = (() => {
+  const fechaDotParsed = (() => {
     const p = (st.fechaDot || '').split('-').map(Number);
     const valida = p.length === 3 && p.every(n => Number.isFinite(n) && n > 0) && p[0] >= 2026 && p[0] <= 2030 && p[1] <= 12 && p[2] <= 31;
     const f = valida ? Date.UTC(p[0], p[1] - 1, p[2]) : HOY;
-    const { esHoy, total, vac, baja, conProt, libres, libranza } = dotacionPara(f);
+    return { p, valida, f };
+  })();
+  const { p: fechaDotP, valida: fechaDotValida, f: fechaDotF } = fechaDotParsed;
+  const dotacionSel = dotacionPara(fechaDotF);
+
+  const dotacion = (() => {
+    const { esHoy, total, vac, baja, conProt, libres, libranza } = dotacionSel;
     const pct = (n: number) => Math.round((n / total) * 100) + '%';
-    const dd = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][new Date(f).getUTCDay()];
-    const rango = valida ? '' : ' (rango 2026–2030)';
+    const dd = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][new Date(fechaDotF).getUTCDay()];
+    const rango = fechaDotValida ? '' : ' (rango 2026–2030)';
     return {
       titulo: total + ' escoltas en plantilla',
-      fechaTxt: !valida ? 'Fecha no válida · mostrando hoy'
+      fechaTxt: !fechaDotValida ? 'Fecha no válida · mostrando hoy'
         : esHoy ? 'Hoy · sábado 12 SEP'
-        : dd + ' ' + p[2] + ' ' + MESES[p[1] - 1].slice(0, 3).toUpperCase(),
+        : dd + ' ' + fechaDotP[2] + ' ' + MESES[fechaDotP[1] - 1].slice(0, 3).toUpperCase(),
       filas: [
-        { k: 'Con protegido', n: conProt.length, w: pct(conProt.length), color: color.accent700, barra: color.accent700, nota: 'Jornada asignada' },
-        { k: 'Libres para refuerzo', n: libres.length, w: pct(libres.length), color: color.accent700, barra: color.accent400, nota: 'En jornada, sin protegido fijo' },
-        { k: 'De libranza (ciclo 14/7)', n: libranza.length, w: pct(libranza.length), color: color.neutral800, barra: color.neutral400, nota: 'Fuera de ciclo' },
-        { k: 'De vacaciones', n: vac.length, w: pct(vac.length), color: color.neutral800, barra: color.neutral300, nota: vac.map(v => v.nombre.split(' ')[0]).join(', ') || 'Nadie' },
-        { k: 'De baja', n: baja.length, w: pct(baja.length), color: WARN, barra: WARN, nota: baja.map(v => v.nombre.split(' ')[0]).join(', ') || 'Nadie' },
+        { k: 'Con protegido', n: conProt.length, w: pct(conProt.length), color: color.accent700, barra: color.accent700, nota: 'Jornada asignada', onTap: () => setState({ sheet: 'dotacionDetalle', dotacionDetalleTipo: 'con' }) },
+        { k: 'Libres para refuerzo', n: libres.length, w: pct(libres.length), color: color.accent700, barra: color.accent400, nota: 'En jornada, sin protegido fijo', onTap: () => setState({ sheet: 'dotacionDetalle', dotacionDetalleTipo: 'libres' }) },
+        { k: 'De libranza (ciclo 14/7)', n: libranza.length, w: pct(libranza.length), color: color.neutral800, barra: color.neutral400, nota: 'Fuera de ciclo', onTap: () => setState({ sheet: 'dotacionDetalle', dotacionDetalleTipo: 'libranza' }) },
+        { k: 'De vacaciones', n: vac.length, w: pct(vac.length), color: color.neutral800, barra: color.neutral300, nota: vac.map(v => v.nombre.split(' ')[0]).join(', ') || 'Nadie', onTap: () => setState({ sheet: 'dotacionDetalle', dotacionDetalleTipo: 'vac' }) },
+        { k: 'De baja', n: baja.length, w: pct(baja.length), color: WARN, barra: WARN, nota: baja.map(v => v.nombre.split(' ')[0]).join(', ') || 'Nadie', onTap: () => setState({ sheet: 'dotacionDetalle', dotacionDetalleTipo: 'baja' }) },
       ],
       libresNombres: (libres.length ? 'Disponibles: ' + libres.map(e => e.nombre).join(' · ') : 'Ningún escolta libre para refuerzo ese día') + rango,
     };
   })();
+
+  const dotacionDetalleTitulos: Record<string, string> = {
+    con: 'Con protegido', libres: 'Libres para refuerzo', libranza: 'De libranza (ciclo 14/7)', vac: 'De vacaciones', baja: 'De baja',
+  };
+  const dotacionDetalleListas: Record<string, { nombre: string; extra: string }[]> = {
+    con: dotacionSel.conProt.map(e => ({ nombre: e.nombre, extra: 'Con ' + (protDe(e.nombre)?.nombre || 'protegido sin identificar') })),
+    libres: dotacionSel.libres.map(e => ({ nombre: e.nombre, extra: e.horas + ' h esta semana' })),
+    libranza: dotacionSel.libranza.map(e => ({ nombre: e.nombre, extra: 'Fuera del ciclo de jornada' })),
+    vac: dotacionSel.vac.map(e => ({ nombre: e.nombre, extra: 'De vacaciones' })),
+    baja: dotacionSel.baja.map(e => ({ nombre: e.nombre, extra: 'De baja' })),
+  };
 
   const abrirHistorialDotacion = () => setState({ sheet: 'historial' });
   const dotacionHistorial = Array.from({ length: 7 }, (_, i) => {
@@ -224,7 +242,7 @@ export function useApp() {
     setState(s => ({
       sheet: null,
       nuevoEscoltaNombre: '',
-      equipo: s.equipo.concat([{ id: Date.now(), nombre, ini, estado: 'disponible', horas: 0, cli: '', certs: [] }]),
+      equipo: s.equipo.concat([{ id: Date.now(), nombre, ini, estado: 'disponible', horas: 0, cli: '', certs: [], inicioJornada: s.nuevoEscoltaInicio }]),
     }));
     flash('Escolta añadido · ' + nombre);
   };
@@ -332,6 +350,8 @@ export function useApp() {
     dotacion,
     dotacionHistorial,
     abrirHistorialDotacion,
+    dotacionDetalleTitulo: dotacionDetalleTitulos[st.dotacionDetalleTipo],
+    dotacionDetalleLista: dotacionDetalleListas[st.dotacionDetalleTipo],
     fechaDot: st.fechaDot,
     setFechaDot: (v: string) => setState({ fechaDot: v }),
     protegidosHoy,
@@ -371,8 +391,8 @@ export function useApp() {
       for (let i = 0; i < hueco; i++) out.push({ num: '', bg: 'transparent', fg: 'transparent', borde: 'transparent', marca: '' });
       for (let d = 1; d <= total; d++) {
         const f = Date.UTC(y, m, d);
-        const work = enJornada(f, st.calEscolta);
-        const c = diaCiclo(f, st.calEscolta);
+        const work = enJornada(f, inicioDe(st.calEscolta));
+        const c = diaCiclo(f, inicioDe(st.calEscolta));
         const esp = m === 8 ? serviciosDe(d).length : 0;
         out.push({
           num: d,
@@ -388,7 +408,7 @@ export function useApp() {
       const y = 2026, m = st.calMes;
       const total = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
       let j = 0;
-      for (let d = 1; d <= total; d++) if (enJornada(Date.UTC(y, m, d), st.calEscolta)) j++;
+      for (let d = 1; d <= total; d++) if (enJornada(Date.UTC(y, m, d), inicioDe(st.calEscolta))) j++;
       return j + ' días de jornada · ' + (total - j) + ' de libranza · ciclo 14/7';
     })(),
     calAnio: MESES.map((nombre, m) => {
@@ -399,7 +419,7 @@ export function useApp() {
       let jornada = 0;
       for (let i = 0; i < hueco; i++) dias.push({ bg: 'transparent' });
       for (let d = 1; d <= total; d++) {
-        const work = enJornada(Date.UTC(2026, m, d), st.calEscolta);
+        const work = enJornada(Date.UTC(2026, m, d), inicioDe(st.calEscolta));
         if (work) jornada++;
         dias.push({ bg: work ? color.accent500 : color.neutral200 });
       }
@@ -413,7 +433,7 @@ export function useApp() {
       let j = 0;
       for (let m = 0; m < 12; m++) {
         const total = new Date(Date.UTC(2026, m + 1, 0)).getUTCDate();
-        for (let d = 1; d <= total; d++) if (enJornada(Date.UTC(2026, m, d), st.calEscolta)) j++;
+        for (let d = 1; d <= total; d++) if (enJornada(Date.UTC(2026, m, d), inicioDe(st.calEscolta))) j++;
       }
       return j + ' días de jornada en 2026 · ' + (365 - j) + ' de libranza';
     })(),
@@ -450,6 +470,8 @@ export function useApp() {
     abrirNuevoEscolta: () => setState({ sheet: 'nuevoEscolta' }),
     nuevoEscoltaNombre: st.nuevoEscoltaNombre,
     setNuevoEscoltaNombre: (v: string) => setState({ nuevoEscoltaNombre: v }),
+    nuevoEscoltaInicio: st.nuevoEscoltaInicio,
+    setNuevoEscoltaInicio: (v: string) => setState({ nuevoEscoltaInicio: v }),
     crearEscolta,
     ficha: {
       ini: fichaEsc.ini, nombre: fichaEsc.nombre,
@@ -510,6 +532,20 @@ export function useApp() {
       flash(fichaEsc.nombre + ' se reincorpora');
     },
     volverEquipo: () => setState({ tab: 'equipo', sheet: null }),
+    jornadaInfo: {
+      inicioTxt: formatIsoShort(fichaEsc.inicioJornada),
+      hoyEnJornada: enJornada(HOY, fichaEsc.inicioJornada),
+      diaDeCiclo: diaCiclo(HOY, fichaEsc.inicioJornada) + 1,
+    },
+    abrirEditarJornada: () => setState({ sheet: 'editarJornada', editarJornadaFecha: fichaEsc.inicioJornada }),
+    editarJornadaFecha: st.editarJornadaFecha,
+    setEditarJornadaFecha: (v: string) => setState({ editarJornadaFecha: v }),
+    guardarJornada: () => {
+      const id = fichaEsc.id;
+      const fecha = st.editarJornadaFecha;
+      setState(s => ({ sheet: null, equipo: s.equipo.map(e => e.id === id ? { ...e, inicioJornada: fecha } : e) }));
+      flash('Ciclo 14/7 actualizado · ' + fichaEsc.nombre);
+    },
 
     // ---- Hoy (escolta) ----
     miProtegido: (() => {
@@ -791,6 +827,8 @@ export function useApp() {
       : st.sheet === 'nuevoProtegido' ? 'Añadir protegido'
       : st.sheet === 'nuevaHabilitacion' ? 'Añadir habilitación'
       : st.sheet === 'editarProtegido' ? 'Editar datos'
+      : st.sheet === 'dotacionDetalle' ? dotacionDetalleTitulos[st.dotacionDetalleTipo]
+      : st.sheet === 'editarJornada' ? 'Ciclo 14/7'
       : 'Solicitar días',
     sheetSub: st.sheet === 'asignar' ? 'Alberto Ferrán · desde las 19:00 · cena privada'
       : st.sheet === 'nuevo' ? (st.editandoServicioId ? 'Modifica los datos y guarda' : 'Se añade sobre el dispositivo permanente del protegido')
@@ -801,6 +839,8 @@ export function useApp() {
       : st.sheet === 'nuevoProtegido' ? 'Se añade con su titular y suplente fijos'
       : st.sheet === 'nuevaHabilitacion' ? 'Para ' + fichaEsc.nombre
       : st.sheet === 'editarProtegido' ? 'Nombre, rol, nivel y rutina'
+      : st.sheet === 'dotacionDetalle' ? dotacion.fechaTxt
+      : st.sheet === 'editarJornada' ? 'Un día en que ' + fichaEsc.nombre + ' empiece jornada — el resto del año se calcula solo'
       : 'Cupo máximo: 3 escoltas por semana',
     cerrarSheet: () => setState({ sheet: null, editandoServicioId: null }),
 

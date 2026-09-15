@@ -28,6 +28,10 @@ export interface Escolta {
   horas: number;
   cli: string;
   certs: Cert[];
+  // Cualquier fecha ("YYYY-MM-DD") en la que empiece uno de sus bloques de
+  // 14 días de jornada. De ahí se deriva todo el ciclo 14/7 — se configura
+  // una sola vez, ver src/logic/ciclo.ts.
+  inicioJornada: string;
 }
 
 const CERTS_BASE: Omit<Cert, 'id'>[] = [
@@ -40,20 +44,22 @@ function certsIniciales(escoltaId: number): Cert[] {
   return CERTS_BASE.map((c, i) => ({ ...c, id: escoltaId + '-c' + i }));
 }
 
+// inicioJornada calculado para que cada quien mantenga exactamente el mismo
+// calendario de jornada/libranza que tenía con el antiguo desplazamiento fijo.
 type EscoltaSeed = Omit<Escolta, 'certs'>;
 const EQUIPO_SEED: EscoltaSeed[] = [
-  { id: 1, nombre: 'Marta Ríos', ini: 'MR', estado: 'servicio', horas: 41, cli: 'Alberto Ferrán' },
-  { id: 2, nombre: 'Iván Colmenar', ini: 'IC', estado: 'servicio', horas: 44, cli: 'Alberto Ferrán · relevo' },
-  { id: 3, nombre: 'Nuria Palau', ini: 'NP', estado: 'disponible', horas: 28, cli: '' },
-  { id: 4, nombre: 'Damián Sosa', ini: 'DS', estado: 'disponible', horas: 33, cli: '' },
-  { id: 5, nombre: 'Elena Bustos', ini: 'EB', estado: 'servicio', horas: 39, cli: 'Carmen Rivas' },
-  { id: 6, nombre: 'Rubén Cid', ini: 'RC', estado: 'descanso', horas: 46, cli: '' },
-  { id: 7, nombre: 'Aitor Lemos', ini: 'AL', estado: 'vacaciones', horas: 0, cli: '' },
-  { id: 8, nombre: 'Sara Quintana', ini: 'SQ', estado: 'disponible', horas: 22, cli: '' },
-  { id: 9, nombre: 'Jon Aramburu', ini: 'JA', estado: 'servicio', horas: 37, cli: 'Tomás Ferrán' },
-  { id: 10, nombre: 'Lucía Vega', ini: 'LV', estado: 'descanso', horas: 43, cli: '' },
-  { id: 11, nombre: 'Óscar Tena', ini: 'OT', estado: 'vacaciones', horas: 0, cli: '' },
-  { id: 12, nombre: 'Paula Serna', ini: 'PS', estado: 'disponible', horas: 30, cli: '' },
+  { id: 1, nombre: 'Marta Ríos', ini: 'MR', estado: 'servicio', horas: 41, cli: 'Alberto Ferrán', inicioJornada: '2026-01-01' },
+  { id: 2, nombre: 'Iván Colmenar', ini: 'IC', estado: 'servicio', horas: 44, cli: 'Alberto Ferrán · relevo', inicioJornada: '2026-01-08' },
+  { id: 3, nombre: 'Nuria Palau', ini: 'NP', estado: 'disponible', horas: 28, cli: '', inicioJornada: '2026-01-05' },
+  { id: 4, nombre: 'Damián Sosa', ini: 'DS', estado: 'disponible', horas: 33, cli: '', inicioJornada: '2026-01-19' },
+  { id: 5, nombre: 'Elena Bustos', ini: 'EB', estado: 'servicio', horas: 39, cli: 'Carmen Rivas', inicioJornada: '2026-01-19' },
+  { id: 6, nombre: 'Rubén Cid', ini: 'RC', estado: 'descanso', horas: 46, cli: '', inicioJornada: '2026-01-05' },
+  { id: 7, nombre: 'Aitor Lemos', ini: 'AL', estado: 'vacaciones', horas: 0, cli: '', inicioJornada: '2026-01-12' },
+  { id: 8, nombre: 'Sara Quintana', ini: 'SQ', estado: 'disponible', horas: 22, cli: '', inicioJornada: '2026-01-15' },
+  { id: 9, nombre: 'Jon Aramburu', ini: 'JA', estado: 'servicio', horas: 37, cli: 'Tomás Ferrán', inicioJornada: '2026-01-12' },
+  { id: 10, nombre: 'Lucía Vega', ini: 'LV', estado: 'descanso', horas: 43, cli: '', inicioJornada: '2026-01-15' },
+  { id: 11, nombre: 'Óscar Tena', ini: 'OT', estado: 'vacaciones', horas: 0, cli: '', inicioJornada: '2026-01-08' },
+  { id: 12, nombre: 'Paula Serna', ini: 'PS', estado: 'disponible', horas: 30, cli: '', inicioJornada: '2026-01-01' },
 ];
 export const EQUIPO_INICIAL: Escolta[] = EQUIPO_SEED.map(e => ({ ...e, certs: certsIniciales(e.id) }));
 
@@ -100,12 +106,6 @@ export const PROTEGIDOS_INICIAL: Protegido[] = [
 ];
 
 export const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-
-export const ANCLA: Record<string, number> = {
-  'Marta Ríos': 0, 'Iván Colmenar': 14, 'Elena Bustos': 3, 'Nuria Palau': 17, 'Lucía Vega': 7,
-  'Paula Serna': 0, 'Jon Aramburu': 10, 'Damián Sosa': 3, 'Rubén Cid': 17, 'Sara Quintana': 7,
-  'Aitor Lemos': 10, 'Óscar Tena': 14,
-};
 
 export const EST_PROT: Record<EstadoProtegido, { txt: string; tag: 'accent' | 'outline' | 'neutral' }> = {
   con: { txt: 'CON PROTEGIDO', tag: 'accent' },

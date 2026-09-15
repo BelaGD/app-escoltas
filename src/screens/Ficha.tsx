@@ -35,6 +35,15 @@ export function Ficha() {
         ))}
       </View>
 
+      <SectionTitle>Ciclo 14/7</SectionTitle>
+      <View style={styles.jornadaBox}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.jornadaTitulo}>{app.jornadaInfo.hoyEnJornada ? 'Hoy en jornada' : 'Hoy en libranza'} · día {app.jornadaInfo.diaDeCiclo} de 21</Text>
+          <Text style={styles.jornadaNota}>Ciclo fijado desde {app.jornadaInfo.inicioTxt}</Text>
+        </View>
+        <Btn label="Editar" variant="ghost" small onPress={app.abrirEditarJornada} />
+      </View>
+
       <SectionTitle>Habilitaciones</SectionTitle>
       <View style={{ gap: 6, marginBottom: 10 }}>
         {f.certs.map(c => (
@@ -104,4 +113,7 @@ const styles = StyleSheet.create({
   proxCuando: { fontFamily: font.heading, fontSize: 13, minWidth: 74, color: color.text },
   proxCliente: { flex: 1, fontSize: 12.5, color: color.text, fontFamily: font.body },
   proxHoras: { fontSize: 11.5, color: color.neutral600, fontFamily: font.body },
+  jornadaBox: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: color.neutral300, padding: 11, marginBottom: 18 },
+  jornadaTitulo: { fontSize: 13, fontWeight: '600', color: color.text, fontFamily: font.bodySemiBold },
+  jornadaNota: { fontSize: 11, color: color.neutral600, marginTop: 2, fontFamily: font.body },
 });
