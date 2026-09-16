@@ -222,26 +222,26 @@ export function useApp() {
 
   const reporte = (() => {
     const DIAS_LARGO = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
-    // Fecha real del dispositivo — a diferencia del resto de la app (que usa
-    // el "hoy" fijo de la demo, 12/09/2026), el reporte sí debe mostrar el
-    // día real en que se genera, aunque los datos de abajo sigan siendo de
-    // ejemplo hasta que haya datos reales (Fase 05).
-    const hoyReal = new Date();
-    const diaSemana = DIAS_LARGO[hoyReal.getDay()];
-    const dd = String(hoyReal.getDate()).padStart(2, '0');
-    const mm = String(hoyReal.getMonth() + 1).padStart(2, '0');
-    const aaaa = hoyReal.getFullYear();
+    // Usa la MISMA fecha que "Consultar fecha" en Dotación disponible — el
+    // reporte se prepara la noche anterior para el día siguiente, o para
+    // cualquier otro día que pidan, así que debe seguir a esa fecha, no al
+    // reloj del teléfono ni a un día fijo.
+    const diaSemana = DIAS_LARGO[new Date(fechaDotF).getUTCDay()];
+    const dd = String(fechaDotValida ? fechaDotP[2] : 12).padStart(2, '0');
+    const mm = String(fechaDotValida ? fechaDotP[1] : 9).padStart(2, '0');
+    const aaaa = fechaDotValida ? fechaDotP[0] : 2026;
+    const diaNum = fechaDotValida ? fechaDotP[2] : 12;
     const dispositivo = st.protegidos.map(p => {
       const a = asigDe(p);
       return { codigo: p.codigo, titular: a.titular, suplente: a.suplente, cubierto: p.estado !== 'sin' };
     });
-    const especiales = serviciosDe(12).map(s => {
+    const especiales = serviciosDe(diaNum).map(s => {
       const p = st.protegidos.find(x => x.nombre === s[2]);
       return { hora: s[0], codigo: p?.codigo || s[2], tipo: s[3], dotacion: s[4] || '' };
     });
-    const francos = st.equipo.filter(e => estadoDe(e) === 'descanso').map(e => e.nombre);
-    const vacaciones = st.equipo.filter(e => estadoDe(e) === 'vacaciones').map(e => e.nombre);
-    const baja = st.equipo.filter(e => estadoDe(e) === 'baja').map(e => e.nombre);
+    const francos = dotacionSel.libranza.map(e => e.nombre);
+    const vacaciones = dotacionSel.vac.map(e => e.nombre);
+    const baja = dotacionSel.baja.map(e => e.nombre);
     return { fechaTitulo: diaSemana + ' ' + dd + '/' + mm + '/' + aaaa, dispositivo, especiales, francos, vacaciones, baja };
   })();
 

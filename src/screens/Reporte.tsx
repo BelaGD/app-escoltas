@@ -4,6 +4,7 @@ import ViewShot, { ViewShotRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { color, font } from '../theme/theme';
 import { Btn } from '../components/ui/Button';
+import { DateField } from '../components/ui/DateField';
 import { useApp } from '../logic/useApp';
 
 export function Reporte() {
@@ -33,6 +34,7 @@ export function Reporte() {
   return (
     <View>
       <Btn label="← Hoy" variant="ghost" onPress={() => app.go('hoy')} small style={{ alignSelf: 'flex-start', marginBottom: 10 }} />
+      <DateField label="Reportar para el día" value={app.fechaDot} onChange={app.setFechaDot} style={{ marginBottom: 14 }} />
       <Btn label={generando ? 'Generando…' : 'Compartir por WhatsApp'} variant="primary" block onPress={compartir} disabled={generando} style={{ marginBottom: 16 }} />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
