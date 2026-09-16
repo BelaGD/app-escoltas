@@ -73,6 +73,7 @@ export function useApp() {
     ficha: ['Ficha de escolta', 'Equipo'],
     notif: ['Últimos 7 días', 'Avisos'],
     ajustes: ['Cuenta y avisos', 'Ajustes'],
+    reporte: ['Para compartir', 'Reporte del día'],
   };
   const head = heads[tab] || heads.hoy;
   const noLeidas = st.notifs.filter(n => !n.leida).length;
@@ -82,7 +83,7 @@ export function useApp() {
   const navDefs: [string, string][] = coord
     ? [['hoy', 'Hoy'], ['cal', 'Agenda'], ['prot', 'Protegidos'], ['vac', 'Vacac.'], ['equipo', 'Equipo']]
     : [['hoy', 'Hoy'], ['cal', 'Agenda'], ['vac', 'Vacac.'], ['perfil', 'Perfil']];
-  const activeTab = tab === 'ficha' ? 'equipo' : tab;
+  const activeTab = tab === 'ficha' ? 'equipo' : tab === 'reporte' ? 'hoy' : tab;
 
   const servHoy = serviciosDe(12).map(s => {
     const cubierto = s[4] || st.cubierto;
@@ -219,6 +220,23 @@ export function useApp() {
     };
   });
 
+  const reporte = (() => {
+    const DIAS_LARGO = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+    const diaSemana = DIAS_LARGO[new Date(HOY).getUTCDay()];
+    const dispositivo = st.protegidos.map(p => {
+      const a = asigDe(p);
+      return { codigo: p.codigo, titular: a.titular, suplente: a.suplente, cubierto: p.estado !== 'sin' };
+    });
+    const especiales = serviciosDe(12).map(s => {
+      const p = st.protegidos.find(x => x.nombre === s[2]);
+      return { hora: s[0], codigo: p?.codigo || s[2], tipo: s[3], dotacion: s[4] || '' };
+    });
+    const francos = st.equipo.filter(e => estadoDe(e) === 'descanso').map(e => e.nombre);
+    const vacaciones = st.equipo.filter(e => estadoDe(e) === 'vacaciones').map(e => e.nombre);
+    const baja = st.equipo.filter(e => estadoDe(e) === 'baja').map(e => e.nombre);
+    return { fechaTitulo: diaSemana + ' 12/09/2026', dispositivo, especiales, francos, vacaciones, baja };
+  })();
+
   const candidatos = st.equipo.filter(e => estadoDe(e) === 'disponible').map(e => ({
     ini: e.ini, nombre: e.nombre,
     nota: e.horas > 32 ? e.horas + ' h esta semana · llegaría a ' + (e.horas + 7) + ' h' : e.horas + ' h esta semana · descansó 14 h',
@@ -263,9 +281,9 @@ export function useApp() {
     const id = 'p' + Date.now();
     setState(s => ({
       sheet: null,
-      nuevoProtegido: { nombre: '', rol: '', nivel: 'NIVEL 1', titular: '', suplente: '', inicio: '08:00', rutina: '', telefono: '' },
+      nuevoProtegido: { nombre: '', codigo: '', rol: '', nivel: 'NIVEL 1', titular: '', suplente: '', inicio: '08:00', rutina: '', telefono: '' },
       protegidos: s.protegidos.concat([{
-        id, nombre: n.nombre.trim(), rol: n.rol.trim() || 'Protegido', nivel: n.nivel,
+        id, nombre: n.nombre.trim(), codigo: n.codigo.trim() || ('P' + (s.protegidos.length + 1)), rol: n.rol.trim() || 'Protegido', nivel: n.nivel,
         titular: n.titular, tit: iniDe(n.titular), suplente: n.suplente,
         inicio: n.inicio || '08:00',
         rutina: n.rutina.trim() || ('Presentación ' + (n.inicio || '08:00')),
@@ -295,7 +313,7 @@ export function useApp() {
 
   const abrirEditarProtegido = (p: Protegido) => setState({
     sheet: 'editarProtegido',
-    editProtegido: { id: p.id, nombre: p.nombre, rol: p.rol, nivel: p.nivel, rutina: p.rutina, telefono: p.telefono },
+    editProtegido: { id: p.id, nombre: p.nombre, codigo: p.codigo, rol: p.rol, nivel: p.nivel, rutina: p.rutina, telefono: p.telefono },
   });
   const guardarEdicionProtegido = () => {
     const ep = st.editProtegido;
@@ -303,7 +321,7 @@ export function useApp() {
     setState(s => ({
       sheet: null,
       protegidos: s.protegidos.map(p => p.id === ep.id
-        ? { ...p, nombre: ep.nombre.trim(), rol: ep.rol.trim(), nivel: ep.nivel, rutina: ep.rutina.trim(), telefono: ep.telefono.trim() }
+        ? { ...p, nombre: ep.nombre.trim(), codigo: ep.codigo.trim() || p.codigo, rol: ep.rol.trim(), nivel: ep.nivel, rutina: ep.rutina.trim(), telefono: ep.telefono.trim() }
         : p),
     }));
     flash('Datos actualizados · ' + ep.nombre.trim());
@@ -355,6 +373,8 @@ export function useApp() {
     fechaDot: st.fechaDot,
     setFechaDot: (v: string) => setState({ fechaDot: v }),
     protegidosHoy,
+    reporte,
+    abrirReporte: () => setState({ tab: 'reporte' }),
     servHoy,
     serviciosMeta: servHoy.filter(s => s.estado === 'CUBIERTO').length + ' de ' + servHoy.length + ' cubiertos',
     disponibles: st.equipo.filter(e => estadoDe(e) === 'disponible').map(e => ({
@@ -664,8 +684,9 @@ export function useApp() {
       };
     }),
     abrirNuevoProtegido: () => setState({ sheet: 'nuevoProtegido' }),
-    epNombre: st.editProtegido.nombre, epRol: st.editProtegido.rol, epRutina: st.editProtegido.rutina, epTelefono: st.editProtegido.telefono,
+    epNombre: st.editProtegido.nombre, epCodigo: st.editProtegido.codigo, epRol: st.editProtegido.rol, epRutina: st.editProtegido.rutina, epTelefono: st.editProtegido.telefono,
     setEpNombre: (v: string) => setState(s => ({ editProtegido: { ...s.editProtegido, nombre: v } })),
+    setEpCodigo: (v: string) => setState(s => ({ editProtegido: { ...s.editProtegido, codigo: v } })),
     setEpRol: (v: string) => setState(s => ({ editProtegido: { ...s.editProtegido, rol: v } })),
     setEpRutina: (v: string) => setState(s => ({ editProtegido: { ...s.editProtegido, rutina: v } })),
     setEpTelefono: (v: string) => setState(s => ({ editProtegido: { ...s.editProtegido, telefono: v } })),
@@ -674,7 +695,8 @@ export function useApp() {
       onTap: () => setState(s => ({ editProtegido: { ...s.editProtegido, nivel: n } })),
     })),
     guardarEdicionProtegido,
-    npNombre: st.nuevoProtegido.nombre, npRol: st.nuevoProtegido.rol, npInicio: st.nuevoProtegido.inicio, npRutina: st.nuevoProtegido.rutina, npTelefono: st.nuevoProtegido.telefono,
+    npNombre: st.nuevoProtegido.nombre, npCodigo: st.nuevoProtegido.codigo, npRol: st.nuevoProtegido.rol, npInicio: st.nuevoProtegido.inicio, npRutina: st.nuevoProtegido.rutina, npTelefono: st.nuevoProtegido.telefono,
+    setNpCodigo: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, codigo: v } })),
     setNpTelefono: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, telefono: v } })),
     setNpNombre: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, nombre: v } })),
     setNpRol: (v: string) => setState(s => ({ nuevoProtegido: { ...s.nuevoProtegido, rol: v } })),

@@ -22,6 +22,7 @@ import { Ficha } from './Ficha';
 import { Perfil } from './Perfil';
 import { Notificaciones } from './Notificaciones';
 import { Ajustes } from './Ajustes';
+import { Reporte } from './Reporte';
 
 function Content() {
   const app = useApp();
@@ -35,6 +36,7 @@ function Content() {
     case 'perfil': return <Perfil />;
     case 'notif': return <Notificaciones />;
     case 'ajustes': return <Ajustes />;
+    case 'reporte': return <Reporte />;
     default: return null;
   }
 }

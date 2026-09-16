@@ -30,7 +30,8 @@
     },
     "owner": "belagd",
     "plugins": [
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-sharing"
     ]
   }
 }

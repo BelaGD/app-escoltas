@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { History } from 'lucide-react-native';
+import { History, Share2 } from 'lucide-react-native';
 import { color, font } from '../theme/theme';
 import { Blueprint } from '../components/ui/Blueprint';
 import { DateField } from '../components/ui/DateField';
@@ -21,9 +21,14 @@ export function HoyCoord() {
             <Text style={styles.kicker}>Dotación disponible</Text>
             <Text style={styles.h}>{dotacion.titulo}</Text>
           </View>
-          <Pressable style={styles.historialBtn} onPress={app.abrirHistorialDotacion} hitSlop={6}>
-            <History size={16} strokeWidth={1.5} color={color.accent700} />
-          </Pressable>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <Pressable style={styles.historialBtn} onPress={app.abrirHistorialDotacion} hitSlop={6}>
+              <History size={16} strokeWidth={1.5} color={color.accent700} />
+            </Pressable>
+            <Pressable style={styles.historialBtn} onPress={app.abrirReporte} hitSlop={6}>
+              <Share2 size={16} strokeWidth={1.5} color={color.accent700} />
+            </Pressable>
+          </View>
         </View>
         <View style={styles.dateRow}>
           <DateField label="Consultar fecha" value={app.fechaDot} onChange={app.setFechaDot} style={{ flex: 1 }} />

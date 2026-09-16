@@ -13,7 +13,7 @@ import {
 } from '../data/mock';
 
 export type Rol = 'coord' | 'escolta';
-export type Tab = 'hoy' | 'cal' | 'vac' | 'prot' | 'equipo' | 'perfil' | 'ficha' | 'notif' | 'ajustes';
+export type Tab = 'hoy' | 'cal' | 'vac' | 'prot' | 'equipo' | 'perfil' | 'ficha' | 'notif' | 'ajustes' | 'reporte';
 export type Sheet = 'asignar' | 'nuevo' | 'asignacion' | 'detalle' | 'solicitud' | 'historial' | 'nuevoEscolta' | 'nuevoProtegido' | 'nuevaHabilitacion' | 'editarProtegido' | 'dotacionDetalle' | 'editarJornada' | null;
 export type DotacionDetalleTipo = 'con' | 'libres' | 'libranza' | 'vac' | 'baja';
 export type AuthView = 'login' | 'recuperar';
@@ -79,9 +79,9 @@ export interface AppState {
   protegidos: Protegido[];
   nuevoEscoltaNombre: string;
   nuevoEscoltaInicio: string;
-  nuevoProtegido: { nombre: string; rol: string; nivel: string; titular: string; suplente: string; inicio: string; rutina: string; telefono: string };
+  nuevoProtegido: { nombre: string; codigo: string; rol: string; nivel: string; titular: string; suplente: string; inicio: string; rutina: string; telefono: string };
   nuevaHab: { nombre: string; num: string; vence: string; alerta: boolean };
-  editProtegido: { id: string; nombre: string; rol: string; nivel: string; rutina: string; telefono: string };
+  editProtegido: { id: string; nombre: string; codigo: string; rol: string; nivel: string; rutina: string; telefono: string };
   dotacionDetalleTipo: DotacionDetalleTipo;
   editarJornadaFecha: string;
   editandoServicioId: string | null;
@@ -129,9 +129,9 @@ export const initialState: AppState = {
   protegidos: PROTEGIDOS_INICIAL,
   nuevoEscoltaNombre: '',
   nuevoEscoltaInicio: '2026-01-01',
-  nuevoProtegido: { nombre: '', rol: '', nivel: 'NIVEL 1', titular: '', suplente: '', inicio: '08:00', rutina: '', telefono: '' },
+  nuevoProtegido: { nombre: '', codigo: '', rol: '', nivel: 'NIVEL 1', titular: '', suplente: '', inicio: '08:00', rutina: '', telefono: '' },
   nuevaHab: { nombre: '', num: '', vence: '', alerta: false },
-  editProtegido: { id: '', nombre: '', rol: '', nivel: 'NIVEL 1', rutina: '', telefono: '' },
+  editProtegido: { id: '', nombre: '', codigo: '', rol: '', nivel: 'NIVEL 1', rutina: '', telefono: '' },
   dotacionDetalleTipo: 'con',
   editarJornadaFecha: '2026-01-01',
   editandoServicioId: null,

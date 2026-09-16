@@ -213,6 +213,7 @@ function NuevoProtegidoSheet() {
   return (
     <View style={{ gap: 14 }}>
       <Field label="Nombre completo" value={app.npNombre} onChangeText={app.setNpNombre} placeholder="Nombre Apellido" />
+      <Field label="Código (para reportes)" value={app.npCodigo} onChangeText={app.setNpCodigo} placeholder="F1, F2…" />
       <Field label="Rol / relación" value={app.npRol} onChangeText={app.setNpRol} placeholder="Cónyuge, hijo, madre…" />
       <View>
         <Text style={styles.label}>Nivel</Text>
@@ -266,6 +267,7 @@ function EditarProtegidoSheet() {
   return (
     <View style={{ gap: 14 }}>
       <Field label="Nombre completo" value={app.epNombre} onChangeText={app.setEpNombre} />
+      <Field label="Código (para reportes)" value={app.epCodigo} onChangeText={app.setEpCodigo} placeholder="F1, F2…" />
       <Field label="Rol / relación" value={app.epRol} onChangeText={app.setEpRol} />
       <View>
         <Text style={styles.label}>Nivel</Text>
