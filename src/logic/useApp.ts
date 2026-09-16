@@ -222,7 +222,15 @@ export function useApp() {
 
   const reporte = (() => {
     const DIAS_LARGO = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
-    const diaSemana = DIAS_LARGO[new Date(HOY).getUTCDay()];
+    // Fecha real del dispositivo — a diferencia del resto de la app (que usa
+    // el "hoy" fijo de la demo, 12/09/2026), el reporte sí debe mostrar el
+    // día real en que se genera, aunque los datos de abajo sigan siendo de
+    // ejemplo hasta que haya datos reales (Fase 05).
+    const hoyReal = new Date();
+    const diaSemana = DIAS_LARGO[hoyReal.getDay()];
+    const dd = String(hoyReal.getDate()).padStart(2, '0');
+    const mm = String(hoyReal.getMonth() + 1).padStart(2, '0');
+    const aaaa = hoyReal.getFullYear();
     const dispositivo = st.protegidos.map(p => {
       const a = asigDe(p);
       return { codigo: p.codigo, titular: a.titular, suplente: a.suplente, cubierto: p.estado !== 'sin' };
@@ -234,7 +242,7 @@ export function useApp() {
     const francos = st.equipo.filter(e => estadoDe(e) === 'descanso').map(e => e.nombre);
     const vacaciones = st.equipo.filter(e => estadoDe(e) === 'vacaciones').map(e => e.nombre);
     const baja = st.equipo.filter(e => estadoDe(e) === 'baja').map(e => e.nombre);
-    return { fechaTitulo: diaSemana + ' 12/09/2026', dispositivo, especiales, francos, vacaciones, baja };
+    return { fechaTitulo: diaSemana + ' ' + dd + '/' + mm + '/' + aaaa, dispositivo, especiales, francos, vacaciones, baja };
   })();
 
   const candidatos = st.equipo.filter(e => estadoDe(e) === 'disponible').map(e => ({

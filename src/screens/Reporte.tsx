@@ -88,6 +88,8 @@ export function Reporte() {
                 {r.baja.map((n, i) => <Text key={i} style={styles.nombreLista}>{n}</Text>)}
               </>
             )}
+
+            <Text style={styles.watermark}>DATOS DE EJEMPLO · GENERADO CON RELEVO</Text>
           </View>
         </ViewShot>
       </ScrollView>
@@ -116,4 +118,5 @@ const styles = StyleSheet.create({
   alerta: { fontFamily: font.heading, fontSize: 10, color: color.warn, letterSpacing: 0.5 },
   nombreLista: { fontSize: 12.5, color: color.text, paddingVertical: 2, fontFamily: font.body },
   vacio: { fontSize: 12, color: color.neutral600, fontStyle: 'italic', fontFamily: font.body },
+  watermark: { fontFamily: font.heading, fontSize: 9, letterSpacing: 0.8, color: color.neutral500, textAlign: 'center', marginTop: 16, paddingTop: 10, borderTopWidth: 1, borderTopColor: color.neutral200 },
 });
