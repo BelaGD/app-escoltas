@@ -140,6 +140,11 @@ export interface Solicitud {
   id: string;
   nombre: string;
   rango: string;
+  // Mismo rango que arriba, pero como fechas reales ("YYYY-MM-DD") para
+  // poder consultar el calendario ("¿está de vacaciones ese día?"), no solo
+  // para mostrar el texto.
+  desde: string;
+  hasta: string;
   dias: string;
   aviso: string;
   warn: boolean;
@@ -147,23 +152,25 @@ export interface Solicitud {
 }
 
 export const SOLICITUDES_INICIALES: Solicitud[] = [
-  { id: 'a', nombre: 'Rubén Cid', rango: '22 SEP – 03 OCT', dias: '10 días laborables', aviso: 'Coincide con Lucía Vega (2 de 3 del cupo)', warn: false, estado: 'pendiente' },
-  { id: 'b', nombre: 'Sara Quintana', rango: '29 SEP – 05 OCT', dias: '5 días laborables', aviso: 'Deja el nocturno de Clínica Aurora sin relevo', warn: true, estado: 'pendiente' },
-  { id: 'c', nombre: 'Aitor Lemos', rango: '01 SEP – 19 SEP', dias: '15 días laborables', aviso: '', warn: false, estado: 'aprobada' },
-  { id: 'd', nombre: 'Óscar Tena', rango: '08 SEP – 16 SEP', dias: '7 días laborables', aviso: '', warn: false, estado: 'aprobada' },
-  { id: 'e', nombre: 'Jon Aramburu', rango: '24 DIC – 02 ENE', dias: '6 días laborables', aviso: '', warn: false, estado: 'rechazada' },
+  { id: 'a', nombre: 'Rubén Cid', rango: '22 SEP – 03 OCT', desde: '2026-09-22', hasta: '2026-10-03', dias: '10 días laborables', aviso: 'Coincide con Lucía Vega (2 de 3 del cupo)', warn: false, estado: 'pendiente' },
+  { id: 'b', nombre: 'Sara Quintana', rango: '29 SEP – 05 OCT', desde: '2026-09-29', hasta: '2026-10-05', dias: '5 días laborables', aviso: 'Deja el nocturno de Clínica Aurora sin relevo', warn: true, estado: 'pendiente' },
+  { id: 'c', nombre: 'Aitor Lemos', rango: '01 SEP – 19 SEP', desde: '2026-09-01', hasta: '2026-09-19', dias: '15 días laborables', aviso: '', warn: false, estado: 'aprobada' },
+  { id: 'd', nombre: 'Óscar Tena', rango: '08 SEP – 16 SEP', desde: '2026-09-08', hasta: '2026-09-16', dias: '7 días laborables', aviso: '', warn: false, estado: 'aprobada' },
+  { id: 'e', nombre: 'Jon Aramburu', rango: '24 DIC – 02 ENE', desde: '2026-12-24', hasta: '2027-01-02', dias: '6 días laborables', aviso: '', warn: false, estado: 'rechazada' },
 ];
 
 export interface MiSolicitud {
   id: string;
   rango: string;
+  desde: string;
+  hasta: string;
   dias: string;
   estado: 'pendiente' | 'aprobada' | 'rechazada';
 }
 
 export const MIS_SOLICITUDES_INICIALES: MiSolicitud[] = [
-  { id: 'm1', rango: '13 OCT – 19 OCT', dias: '5 días laborables', estado: 'pendiente' },
-  { id: 'm2', rango: '04 AGO – 22 AGO', dias: '15 días laborables', estado: 'aprobada' },
+  { id: 'm1', rango: '13 OCT – 19 OCT', desde: '2026-10-13', hasta: '2026-10-19', dias: '5 días laborables', estado: 'pendiente' },
+  { id: 'm2', rango: '04 AGO – 22 AGO', desde: '2026-08-04', hasta: '2026-08-22', dias: '15 días laborables', estado: 'aprobada' },
 ];
 
 export const CUPO_DATA: [string, number][] = [

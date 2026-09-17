@@ -27,10 +27,15 @@ function SemanaView() {
   const app = useApp();
   return (
     <View>
+      <View style={styles.monthNav}>
+        <Pressable onPress={app.calSemanaPrev} hitSlop={8}><Text style={styles.monthArrow}>←</Text></Pressable>
+        <Text style={styles.monthName}>{app.calSemanaLabel}</Text>
+        <Pressable onPress={app.calSemanaNext} hitSlop={8}><Text style={styles.monthArrow}>→</Text></Pressable>
+      </View>
       <View style={styles.weekRow}>
         {app.semana.map(d => (
           <Pressable
-            key={d.num}
+            key={d.f}
             onPress={d.onTap}
             style={[
               styles.weekDay,
@@ -99,6 +104,7 @@ function MesView() {
       <View style={styles.legendRow}>
         <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: color.accent200, borderColor: color.neutral300 }]} /><Text style={styles.legendText}>Jornada</Text></View>
         <View style={styles.legendItem}><View style={[styles.legendSwatch, { borderColor: color.neutral300 }]} /><Text style={styles.legendText}>Libranza</Text></View>
+        <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: color.neutral500, borderColor: color.neutral500 }]} /><Text style={styles.legendText}>Vacaciones</Text></View>
         <View style={styles.legendItem}><View style={[styles.legendSwatch, { borderColor: color.accent700 }]} /><Text style={styles.legendText}>Inicio de ciclo</Text></View>
         <View style={styles.legendItem}><Text style={[styles.legendText, { color: color.accent700 }]}>● Servicio especial</Text></View>
       </View>
@@ -117,10 +123,11 @@ function AnioView() {
       <View style={styles.legendRow}>
         <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: color.accent500 }]} /><Text style={styles.legendText}>Jornada</Text></View>
         <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: color.neutral200 }]} /><Text style={styles.legendText}>Libranza</Text></View>
+        <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: color.neutral500 }]} /><Text style={styles.legendText}>Vacaciones</Text></View>
       </View>
       <View style={styles.anioGrid}>
         {app.calAnio.map((m, i) => (
-          <Pressable key={i} onPress={m.onTap} style={styles.anioMes}>
+          <View key={i} style={styles.anioMes}>
             <Text style={styles.anioMesNombre}>{m.nombre}</Text>
             <View style={styles.anioMesDivider} />
             <View style={styles.anioMesGrid}>
@@ -128,11 +135,17 @@ function AnioView() {
                 <View key={j} style={[styles.anioMesDia, { backgroundColor: d.bg, borderColor: d.bg === 'transparent' ? 'transparent' : color.neutral300 }]} />
               ))}
             </View>
-            <Text style={styles.anioMesStat}>{m.jornada} jornada · {m.libranza} libranza</Text>
-          </Pressable>
+            <Text style={styles.anioMesStat}>{m.jornada}j · {m.libranza}l{m.vacaciones ? ' · ' + m.vacaciones + 'v' : ''}</Text>
+          </View>
         ))}
       </View>
       <Text style={styles.resumen}>{app.calEscolta} · {app.calAnioResumen}</Text>
+      {app.calAnioVacaciones.length > 0 && (
+        <View style={styles.vacBox}>
+          <Text style={styles.vacTitulo}>Vacaciones aprobadas en 2026</Text>
+          {app.calAnioVacaciones.map((r, i) => <Text key={i} style={styles.vacItem}>{r}</Text>)}
+        </View>
+      )}
     </View>
   );
 }
@@ -177,4 +190,7 @@ const styles = StyleSheet.create({
   anioMesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2.5 },
   anioMesDia: { width: 15, height: 15, borderWidth: 1 },
   anioMesStat: { fontSize: 10.5, color: color.neutral600, marginTop: 10, fontFamily: font.body },
+  vacBox: { borderWidth: 1, borderColor: color.neutral300, padding: 12, marginTop: 14 },
+  vacTitulo: { fontFamily: font.heading, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: color.neutral700, marginBottom: 6 },
+  vacItem: { fontSize: 12.5, color: color.text, paddingVertical: 2, fontFamily: font.body },
 });

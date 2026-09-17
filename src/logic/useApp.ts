@@ -6,7 +6,7 @@ import {
 } from '../data/mock';
 import { color } from '../theme/theme';
 import { diaCiclo, enJornada } from './ciclo';
-import { dmyToLocalDate, formatIsoShort } from './date';
+import { dmyToLocalDate, localDateToIso, formatIsoShort, utcMsToIso, isoToUtcMs } from './date';
 
 export type TagKind = 'accent' | 'outline' | 'neutral';
 
@@ -29,6 +29,13 @@ export function useApp() {
   });
   const iniDe = (n: string) => st.equipo.find(x => x.nombre === n)?.ini || n.slice(0, 2).toUpperCase();
   const inicioDe = (nombre: string) => st.equipo.find(x => x.nombre === nombre)?.inicioJornada || '2026-01-01';
+  // ¿Tiene nombre una solicitud de vacaciones APROBADA que cubra la fecha f (timestamp UTC)?
+  const enVacacionAprobada = (nombre: string, f: number) => st.solicitudes.some(s => {
+    if (s.nombre !== nombre || s.estado !== 'aprobada' || !s.desde || !s.hasta) return false;
+    const desdeF = isoToUtcMs(s.desde);
+    const hastaF = isoToUtcMs(s.hasta);
+    return f >= desdeF && f <= hastaF;
+  });
   const protDe = (nombre: string) => st.protegidos.find(p => asigDe(p).titular === nombre);
   const suplenteDe = (nombre: string) => st.protegidos.find(p => asigDe(p).suplente === nombre);
   const estadoDe = (e: Escolta) => e.estado === 'vacaciones' ? 'vacaciones'
@@ -390,13 +397,43 @@ export function useApp() {
     })),
 
     // ---- Agenda ----
-    semana: SEMANA.map(d => ({
-      dia: d.dia, num: d.num, carga: serviciosDe(d.num).length + ' ev',
-      onTap: () => setState({ dia: d.num }),
-      active: st.dia === d.num,
-    })),
+    ...(() => {
+      const DIAS_CORTO = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+      const inicioSemanaF = isoToUtcMs(st.calSemanaInicio);
+      const diasSemana = Array.from({ length: 7 }, (_, i) => {
+        const f = inicioSemanaF + i * 86400000;
+        const dt = new Date(f);
+        const esSept2026 = dt.getUTCFullYear() === 2026 && dt.getUTCMonth() === 8;
+        const num = dt.getUTCDate();
+        return {
+          dia: DIAS_CORTO[dt.getUTCDay()], num, f,
+          mesAbr: MESES[dt.getUTCMonth()].slice(0, 3).toUpperCase(),
+          carga: (esSept2026 ? serviciosDe(num).length : 0) + ' ev',
+          onTap: () => setState({ dia: num }),
+          active: st.dia === num,
+        };
+      });
+      const finSemanaF = inicioSemanaF + 6 * 86400000;
+      const mesIni = MESES[new Date(inicioSemanaF).getUTCMonth()].slice(0, 3).toUpperCase();
+      const mesFin = MESES[new Date(finSemanaF).getUTCMonth()].slice(0, 3).toUpperCase();
+      const diaActivo = diasSemana.find(d => d.active);
+      return {
+        semana: diasSemana,
+        calSemanaLabel: mesIni === mesFin
+          ? new Date(inicioSemanaF).getUTCDate() + '–' + new Date(finSemanaF).getUTCDate() + ' ' + mesIni
+          : new Date(inicioSemanaF).getUTCDate() + ' ' + mesIni + ' – ' + new Date(finSemanaF).getUTCDate() + ' ' + mesFin,
+        calSemanaPrev: () => setState(s => {
+          const nueva = isoToUtcMs(s.calSemanaInicio) - 7 * 86400000;
+          return { calSemanaInicio: utcMsToIso(nueva), dia: new Date(nueva).getUTCDate() };
+        }),
+        calSemanaNext: () => setState(s => {
+          const nueva = isoToUtcMs(s.calSemanaInicio) + 7 * 86400000;
+          return { calSemanaInicio: utcMsToIso(nueva), dia: new Date(nueva).getUTCDate() };
+        }),
+        diaTitulo: (diaActivo?.dia || 'SÁB') + ' ' + st.dia + ' ' + (diaActivo?.mesAbr || 'SEP'),
+      };
+    })(),
     diaSel: st.dia,
-    diaTitulo: (SEMANA.find(d => d.num === st.dia) || SEMANA[5]).dia + ' ' + st.dia + ' SEP',
     diaMeta: coord ? diaServ.length + (diaServ.length === 1 ? ' servicio' : ' servicios')
       : misDia.length + (misDia.length === 1 ? ' servicio mío' : ' servicios míos'),
     diaServicios: diaLista,
@@ -419,13 +456,14 @@ export function useApp() {
       for (let i = 0; i < hueco; i++) out.push({ num: '', bg: 'transparent', fg: 'transparent', borde: 'transparent', marca: '' });
       for (let d = 1; d <= total; d++) {
         const f = Date.UTC(y, m, d);
+        const enVac = enVacacionAprobada(st.calEscolta, f);
         const work = enJornada(f, inicioDe(st.calEscolta));
         const c = diaCiclo(f, inicioDe(st.calEscolta));
         const esp = m === 8 ? serviciosDe(d).length : 0;
         out.push({
           num: d,
-          bg: work ? color.accent200 : 'transparent',
-          fg: work ? color.accent900 : color.neutral600,
+          bg: enVac ? color.neutral500 : work ? color.accent200 : 'transparent',
+          fg: enVac ? color.white : work ? color.accent900 : color.neutral600,
           borde: c === 0 ? color.accent700 : color.neutral300,
           marca: esp ? '●' : '',
         });
@@ -435,36 +473,47 @@ export function useApp() {
     calMesResumen: (() => {
       const y = 2026, m = st.calMes;
       const total = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-      let j = 0;
-      for (let d = 1; d <= total; d++) if (enJornada(Date.UTC(y, m, d), inicioDe(st.calEscolta))) j++;
-      return j + ' días de jornada · ' + (total - j) + ' de libranza · ciclo 14/7';
+      let j = 0, v = 0;
+      for (let d = 1; d <= total; d++) {
+        const f = Date.UTC(y, m, d);
+        if (enVacacionAprobada(st.calEscolta, f)) v++;
+        else if (enJornada(f, inicioDe(st.calEscolta))) j++;
+      }
+      return j + ' días de jornada · ' + (total - j - v) + ' de libranza' + (v ? ' · ' + v + ' de vacaciones' : '') + ' · ciclo 14/7';
     })(),
     calAnio: MESES.map((nombre, m) => {
       const total = new Date(Date.UTC(2026, m + 1, 0)).getUTCDate();
       const primero = new Date(Date.UTC(2026, m, 1)).getUTCDay();
       const hueco = (primero + 6) % 7;
       const dias: { bg: string }[] = [];
-      let jornada = 0;
+      let jornada = 0, vacaciones = 0;
       for (let i = 0; i < hueco; i++) dias.push({ bg: 'transparent' });
       for (let d = 1; d <= total; d++) {
-        const work = enJornada(Date.UTC(2026, m, d), inicioDe(st.calEscolta));
-        if (work) jornada++;
-        dias.push({ bg: work ? color.accent500 : color.neutral200 });
+        const f = Date.UTC(2026, m, d);
+        const enVac = enVacacionAprobada(st.calEscolta, f);
+        const work = enJornada(f, inicioDe(st.calEscolta));
+        if (enVac) vacaciones++;
+        else if (work) jornada++;
+        dias.push({ bg: enVac ? color.neutral500 : work ? color.accent500 : color.neutral200 });
       }
       return {
         nombre: nombre.slice(0, 3).toUpperCase(),
-        dias, jornada, libranza: total - jornada,
-        onTap: () => setState({ calMes: m, calVista: 'Mes' }),
+        dias, jornada, vacaciones, libranza: total - jornada - vacaciones,
       };
     }),
     calAnioResumen: (() => {
-      let j = 0;
+      let j = 0, v = 0;
       for (let m = 0; m < 12; m++) {
         const total = new Date(Date.UTC(2026, m + 1, 0)).getUTCDate();
-        for (let d = 1; d <= total; d++) if (enJornada(Date.UTC(2026, m, d), inicioDe(st.calEscolta))) j++;
+        for (let d = 1; d <= total; d++) {
+          const f = Date.UTC(2026, m, d);
+          if (enVacacionAprobada(st.calEscolta, f)) v++;
+          else if (enJornada(f, inicioDe(st.calEscolta))) j++;
+        }
       }
-      return j + ' días de jornada en 2026 · ' + (365 - j) + ' de libranza';
+      return j + ' días de jornada en 2026 · ' + (365 - j - v) + ' de libranza' + (v ? ' · ' + v + ' de vacaciones' : '');
     })(),
+    calAnioVacaciones: st.solicitudes.filter(s => s.nombre === st.calEscolta && s.estado === 'aprobada').map(s => s.rango),
 
     // ---- Vacaciones (coordinación) ----
     cupo: CUPO_DATA.map(([rango, n]) => ({
@@ -650,11 +699,13 @@ export function useApp() {
       }
       const id = 'n' + Date.now();
       const rango = st.vacDesde + ' – ' + st.vacHasta;
+      const desdeIso = localDateToIso(dmyToLocalDate(st.vacDesde));
+      const hastaIso = localDateToIso(dmyToLocalDate(st.vacHasta));
       setState(s => ({
         sheet: null,
-        misSolicitudes: ([{ id, rango, dias: '5 días laborables', estado: 'pendiente' }] as MiSolicitud[])
+        misSolicitudes: ([{ id, rango, desde: desdeIso, hasta: hastaIso, dias: '5 días laborables', estado: 'pendiente' }] as MiSolicitud[])
           .concat(s.misSolicitudes.filter(x => x.id !== 'm1')),
-        solicitudes: ([{ id, nombre: 'Marta Ríos', rango, dias: '5 días laborables', aviso: '', warn: false, estado: 'pendiente' }] as Solicitud[])
+        solicitudes: ([{ id, nombre: 'Marta Ríos', rango, desde: desdeIso, hasta: hastaIso, dias: '5 días laborables', aviso: '', warn: false, estado: 'pendiente' }] as Solicitud[])
           .concat(s.solicitudes),
       }));
       flash('Solicitud enviada a coordinación');

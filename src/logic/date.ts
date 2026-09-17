@@ -57,3 +57,20 @@ export function localDateToHm(date: Date): string {
   return `${h}:${m}`;
 }
 
+// A UTC calendar-day timestamp (Date.UTC(...) math, as used throughout the
+// agenda/ciclo calculations) <-> "YYYY-MM-DD", read with UTC getters so it
+// round-trips exactly regardless of the device's timezone.
+export function utcMsToIso(ms: number): string {
+  const d = new Date(ms);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export function isoToUtcMs(iso: string): number {
+  const [y, m, d] = (iso || '').split('-').map(Number);
+  if (!y || !m || !d) return Date.UTC(2026, 8, 12);
+  return Date.UTC(y, m - 1, d);
+}
+

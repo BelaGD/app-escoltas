@@ -97,6 +97,7 @@ export interface AppState {
   calVista: CalVista;
   calEscolta: string;
   calMes: number;
+  calSemanaInicio: string;
   extra: ServicioExtra[];
   asig: Record<string, Asignacion>;
   cancelados: string[];
@@ -147,6 +148,7 @@ export const initialState: AppState = {
   calVista: 'Semana',
   calEscolta: 'Marta Ríos',
   calMes: 8,
+  calSemanaInicio: '2026-09-07',
   extra: [],
   asig: {},
   cancelados: [],
