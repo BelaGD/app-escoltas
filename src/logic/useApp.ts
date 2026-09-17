@@ -36,6 +36,14 @@ export function useApp() {
     const hastaF = isoToUtcMs(s.hasta);
     return f >= desdeF && f <= hastaF;
   });
+  // Semana del año (lunes primero), para el calendario anual exportable —
+  // la semana 1 es la que contiene el 1 de enero.
+  const semanaDelAnio = (f: number) => {
+    const inicioAnio = Date.UTC(2026, 0, 1);
+    const huecoIni = (new Date(inicioAnio).getUTCDay() + 6) % 7;
+    const diffDias = Math.floor((f - inicioAnio) / 86400000);
+    return Math.floor((diffDias + huecoIni) / 7) + 1;
+  };
   const protDe = (nombre: string) => st.protegidos.find(p => asigDe(p).titular === nombre);
   const suplenteDe = (nombre: string) => st.protegidos.find(p => asigDe(p).suplente === nombre);
   const estadoDe = (e: Escolta) => e.estado === 'vacaciones' ? 'vacaciones'
@@ -491,6 +499,39 @@ export function useApp() {
         nombre: nombre.slice(0, 3).toUpperCase(),
         dias, jornada, vacaciones, libranza: total - jornada - vacaciones,
       };
+    }),
+    // Igual que calAnio pero organizado por semanas (filas) con columnas
+    // Lu–Do, para el reporte exportable — un calendario de pared real en
+    // vez de un mosaico de cuadritos.
+    calAnioExport: MESES.map((nombre, m) => {
+      const total = new Date(Date.UTC(2026, m + 1, 0)).getUTCDate();
+      const primero = new Date(Date.UTC(2026, m, 1)).getUTCDay();
+      const hueco = (primero + 6) % 7;
+      type Celda = { num: number; bg: string; fg: string; borde: string; marca: string } | null;
+      const planas: Celda[] = [];
+      for (let i = 0; i < hueco; i++) planas.push(null);
+      for (let d = 1; d <= total; d++) {
+        const f = Date.UTC(2026, m, d);
+        const enVac = enVacacionAprobada(calEscoltaEfectivo, f);
+        const work = enJornada(f, inicioDe(calEscoltaEfectivo));
+        const c = diaCiclo(f, inicioDe(calEscoltaEfectivo));
+        const esp = m === 8 ? serviciosDe(d).length : 0;
+        planas.push({
+          num: d,
+          bg: enVac ? color.neutral500 : work ? color.accent200 : 'transparent',
+          fg: enVac ? color.white : work ? color.accent900 : color.neutral600,
+          borde: c === 0 ? color.accent700 : color.neutral300,
+          marca: esp ? '●' : '',
+        });
+      }
+      while (planas.length % 7 !== 0) planas.push(null);
+      const semanas: { num: number; celdas: Celda[] }[] = [];
+      for (let i = 0; i < planas.length; i += 7) {
+        const celdas = planas.slice(i, i + 7);
+        const primerDia = celdas.find(c => c !== null) as { num: number } | undefined;
+        semanas.push({ num: primerDia ? semanaDelAnio(Date.UTC(2026, m, primerDia.num)) : 0, celdas });
+      }
+      return { nombre: nombre.slice(0, 3).toUpperCase(), semanas };
     }),
     calAnioResumen: (() => {
       let j = 0, v = 0;
