@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import ViewShot, { ViewShotRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { color, font } from '../theme/theme';
@@ -58,15 +58,13 @@ export function Agenda() {
       {vista === 'Año' && <AnioView />}
 
       {app.coord && (
-        <View style={{ marginTop: 20 }}>
-          <Text style={styles.previewLabel}>VISTA PREVIA · SE COMPARTIRÁ ESTA IMAGEN</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <ViewShot ref={shotRef} options={{ format: 'png', quality: 1 }}>
-              {vista === 'Semana' && <SemanaExport />}
-              {vista === 'Mes' && <MesExport />}
-              {vista === 'Año' && <AnioExport />}
-            </ViewShot>
-          </ScrollView>
+        // Fuera de pantalla: no hace falta mostrarla para poder capturarla.
+        <View style={styles.hidden} pointerEvents="none">
+          <ViewShot ref={shotRef} options={{ format: 'png', quality: 1 }}>
+            {vista === 'Semana' && <SemanaExport />}
+            {vista === 'Mes' && <MesExport />}
+            {vista === 'Año' && <AnioExport />}
+          </ViewShot>
         </View>
       )}
     </View>
@@ -177,6 +175,35 @@ function MesView() {
   );
 }
 
+const DIAS_SEM_ANIO = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
+
+// Un mes del calendario anual: nombre, encabezado Lu–Do con columna de
+// semana, y una fila por semana — igual en pantalla y en el reporte
+// exportado, para que ambos muestren siempre lo mismo.
+function MesAnioCard({ mes }: { mes: ReturnType<typeof useApp>['calAnio'][number] }) {
+  return (
+    <>
+      <Text style={styles.anioMesNombre}>{mes.nombre}</Text>
+      <View style={styles.anioMesHeadRow}>
+        <Text style={styles.anioMesSemLabel}>SEM</Text>
+        {DIAS_SEM_ANIO.map((d, j) => <Text key={j} style={styles.anioMesDiaLabel}>{d}</Text>)}
+      </View>
+      {mes.semanas.map((sem, j) => (
+        <View key={j} style={styles.anioMesSemRow}>
+          <Text style={styles.anioMesSemNum}>{sem.num}</Text>
+          {sem.celdas.map((c, k) => (
+            <View key={k} style={[styles.anioMesCelda, c && { backgroundColor: c.bg, borderColor: c.borde, borderWidth: c.borde === color.accent700 ? 1.5 : 0.5 }]}>
+              {c && <Text style={[styles.anioMesCeldaTxt, { color: c.fg }]}>{c.num}</Text>}
+              {c && !!c.marca && <View style={styles.anioMesDot} />}
+            </View>
+          ))}
+        </View>
+      ))}
+      <Text style={styles.anioMesStat}>{mes.jornada}j · {mes.libranza}l{mes.vacaciones ? ' · ' + mes.vacaciones + 'v' : ''}</Text>
+    </>
+  );
+}
+
 function AnioView() {
   const app = useApp();
   return (
@@ -188,17 +215,7 @@ function AnioView() {
       <View style={styles.anioGrid}>
         {app.calAnio.map((m, i) => (
           <View key={i} style={styles.anioMes}>
-            <Text style={styles.anioMesNombre}>{m.nombre}</Text>
-            <View style={styles.anioMesDivider} />
-            <View style={styles.anioMesGrid}>
-              {m.dias.map((d, j) => (
-                <View key={j} style={[styles.anioMesDia, { backgroundColor: d.bg, borderColor: d.num === '' ? 'transparent' : d.borde }]}>
-                  {d.num !== '' && <Text style={[styles.anioMesDiaNum, { color: d.fg }]}>{d.num}</Text>}
-                  {!!d.marca && <Text style={styles.anioMesDiaMarca}>{d.marca}</Text>}
-                </View>
-              ))}
-            </View>
-            <Text style={styles.anioMesStat}>{m.jornada}j · {m.libranza}l{m.vacaciones ? ' · ' + m.vacaciones + 'v' : ''}</Text>
+            <MesAnioCard mes={m} />
           </View>
         ))}
       </View>
@@ -256,8 +273,6 @@ function MesExport() {
   );
 }
 
-const DIAS_SEM_ANIO = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
-
 function AnioExport() {
   const app = useApp();
   return (
@@ -265,24 +280,9 @@ function AnioExport() {
       <ExportHeader titulo="CALENDARIO ANUAL 2026" subtitulo={app.calEscolta + ' · ciclo 14/7'} />
       <LeyendaMes />
       <View style={styles.anioExpGrid}>
-        {app.calAnioExport.map((m, i) => (
+        {app.calAnio.map((m, i) => (
           <View key={i} style={styles.anioExpMes}>
-            <Text style={styles.anioExpMesNombre}>{m.nombre}</Text>
-            <View style={styles.anioExpHeadRow}>
-              <Text style={styles.anioExpSemLabel}>SEM</Text>
-              {DIAS_SEM_ANIO.map((d, j) => <Text key={j} style={styles.anioExpDiaLabel}>{d}</Text>)}
-            </View>
-            {m.semanas.map((sem, j) => (
-              <View key={j} style={styles.anioExpSemRow}>
-                <Text style={styles.anioExpSemNum}>{sem.num}</Text>
-                {sem.celdas.map((c, k) => (
-                  <View key={k} style={[styles.anioExpCelda, c && { backgroundColor: c.bg, borderColor: c.borde, borderWidth: c.borde === color.accent700 ? 1.5 : 0.5 }]}>
-                    {c && <Text style={[styles.anioExpCeldaTxt, { color: c.fg }]}>{c.num}</Text>}
-                    {c && !!c.marca && <View style={styles.anioExpDot} />}
-                  </View>
-                ))}
-              </View>
-            ))}
+            <MesAnioCard mes={m} />
           </View>
         ))}
       </View>
@@ -303,7 +303,7 @@ const ANIO_EXPORT_WIDTH = 900;
 const ANIO_EXPORT_MES_WIDTH = 270;
 
 const styles = StyleSheet.create({
-  previewLabel: { fontFamily: font.heading, fontSize: 10, letterSpacing: 1, color: color.neutral500, marginBottom: 8 },
+  hidden: { position: 'absolute', opacity: 0, left: 0, top: 0 },
   expCard: { width: MES_EXPORT_WIDTH, backgroundColor: '#ffffff', padding: 18, borderWidth: 1, borderColor: color.neutral300 },
   expHead: { alignItems: 'center', marginBottom: 14, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: color.neutral300 },
   expEmpresa: { fontFamily: font.heading, fontSize: 10.5, letterSpacing: 1.5, textAlign: 'center', color: color.accent700 },
@@ -317,15 +317,6 @@ const styles = StyleSheet.create({
   anioExpCard: { width: ANIO_EXPORT_WIDTH, backgroundColor: '#ffffff', padding: 20, borderWidth: 1, borderColor: color.neutral300 },
   anioExpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 15, marginTop: 8 },
   anioExpMes: { width: ANIO_EXPORT_MES_WIDTH, borderWidth: 1, borderColor: color.neutral300, padding: 8 },
-  anioExpMesNombre: { fontFamily: font.heading, fontSize: 13, letterSpacing: 1.5, textAlign: 'center', textTransform: 'uppercase', color: color.text, marginBottom: 6 },
-  anioExpHeadRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: color.neutral300, paddingBottom: 4, marginBottom: 2 },
-  anioExpSemLabel: { width: 22, fontFamily: font.heading, fontSize: 7.5, color: color.neutral500 },
-  anioExpDiaLabel: { flex: 1, textAlign: 'center', fontFamily: font.heading, fontSize: 9, color: color.neutral600 },
-  anioExpSemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 2.5 },
-  anioExpSemNum: { width: 22, fontSize: 8, color: color.neutral400, fontFamily: font.body },
-  anioExpCelda: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4, borderWidth: 0.5, borderColor: 'transparent' },
-  anioExpCeldaTxt: { fontFamily: font.heading, fontSize: 11 },
-  anioExpDot: { position: 'absolute', bottom: 2, width: 3, height: 3, borderRadius: 1.5, backgroundColor: color.accent700 },
   tabla: { borderWidth: 1, borderColor: color.neutral300, marginBottom: 14 },
   tablaRow: { flexDirection: 'row', alignItems: 'stretch' },
   tablaNombreCol: { width: 96, paddingVertical: 6, paddingHorizontal: 6, justifyContent: 'center' },
@@ -352,13 +343,16 @@ const styles = StyleSheet.create({
   anioTitulo: { fontFamily: font.heading, fontSize: 17, letterSpacing: 1, textTransform: 'uppercase', color: color.text, marginBottom: 4 },
   anioGrid: { gap: 10, marginTop: 4 },
   anioMes: { width: '100%', borderWidth: 1, borderColor: color.neutral300, backgroundColor: color.surface, padding: 12 },
-  anioMesNombre: { fontFamily: font.heading, fontSize: 13, letterSpacing: 1.5, color: color.text },
-  anioMesDivider: { height: 1, backgroundColor: color.neutral200, marginTop: 6, marginBottom: 10 },
-  anioMesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2.5 },
-  anioMesDia: { width: 17, height: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  anioMesDiaNum: { fontFamily: font.heading, fontSize: 7.5, lineHeight: 8 },
-  anioMesDiaMarca: { fontSize: 5, lineHeight: 5, color: color.accent700, position: 'absolute', top: 1, right: 1 },
-  anioMesStat: { fontSize: 10.5, color: color.neutral600, marginTop: 10, fontFamily: font.body },
+  anioMesNombre: { fontFamily: font.heading, fontSize: 13, letterSpacing: 1.5, textAlign: 'center', textTransform: 'uppercase', color: color.text, marginBottom: 6 },
+  anioMesHeadRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: color.neutral300, paddingBottom: 4, marginBottom: 2 },
+  anioMesSemLabel: { width: 24, fontFamily: font.heading, fontSize: 8, color: color.neutral500 },
+  anioMesDiaLabel: { flex: 1, textAlign: 'center', fontFamily: font.heading, fontSize: 9.5, letterSpacing: 0.4, color: color.neutral600 },
+  anioMesSemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 3 },
+  anioMesSemNum: { width: 24, fontSize: 8.5, color: color.neutral400, fontFamily: font.body },
+  anioMesCelda: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 5, borderWidth: 0.5, borderColor: 'transparent' },
+  anioMesCeldaTxt: { fontFamily: font.heading, fontSize: 12 },
+  anioMesDot: { position: 'absolute', bottom: 2, width: 3, height: 3, borderRadius: 1.5, backgroundColor: color.accent700 },
+  anioMesStat: { fontSize: 10.5, color: color.neutral600, marginTop: 10, fontFamily: font.body, textAlign: 'center' },
   vacBox: { borderWidth: 1, borderColor: color.neutral300, padding: 12, marginTop: 14 },
   vacTitulo: { fontFamily: font.heading, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: color.neutral700, marginBottom: 6 },
   vacItem: { fontSize: 12.5, color: color.text, paddingVertical: 2, fontFamily: font.body },

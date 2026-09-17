@@ -472,13 +472,17 @@ export function useApp() {
       }
       return j + ' días de jornada · ' + (total - j - v) + ' de libranza' + (v ? ' · ' + v + ' de vacaciones' : '') + ' · ciclo 14/7';
     })(),
+    // Un mes = semanas (filas) de 7 columnas Lu–Do, como un calendario de
+    // pared real — no un mosaico de cuadritos. Se usa tanto en pantalla
+    // como en el reporte exportable, para que ambos muestren lo mismo.
     calAnio: MESES.map((nombre, m) => {
       const total = new Date(Date.UTC(2026, m + 1, 0)).getUTCDate();
       const primero = new Date(Date.UTC(2026, m, 1)).getUTCDay();
       const hueco = (primero + 6) % 7;
-      const dias: { num: number | ''; bg: string; fg: string; borde: string; marca: string }[] = [];
+      type Celda = { num: number; bg: string; fg: string; borde: string; marca: string } | null;
+      const planas: Celda[] = [];
       let jornada = 0, vacaciones = 0;
-      for (let i = 0; i < hueco; i++) dias.push({ num: '', bg: 'transparent', fg: 'transparent', borde: 'transparent', marca: '' });
+      for (let i = 0; i < hueco; i++) planas.push(null);
       for (let d = 1; d <= total; d++) {
         const f = Date.UTC(2026, m, d);
         const enVac = enVacacionAprobada(calEscoltaEfectivo, f);
@@ -487,35 +491,6 @@ export function useApp() {
         const esp = m === 8 ? serviciosDe(d).length : 0;
         if (enVac) vacaciones++;
         else if (work) jornada++;
-        dias.push({
-          num: d,
-          bg: enVac ? color.neutral500 : work ? color.accent200 : 'transparent',
-          fg: enVac ? color.white : work ? color.accent900 : color.neutral600,
-          borde: c === 0 ? color.accent700 : color.neutral300,
-          marca: esp ? '●' : '',
-        });
-      }
-      return {
-        nombre: nombre.slice(0, 3).toUpperCase(),
-        dias, jornada, vacaciones, libranza: total - jornada - vacaciones,
-      };
-    }),
-    // Igual que calAnio pero organizado por semanas (filas) con columnas
-    // Lu–Do, para el reporte exportable — un calendario de pared real en
-    // vez de un mosaico de cuadritos.
-    calAnioExport: MESES.map((nombre, m) => {
-      const total = new Date(Date.UTC(2026, m + 1, 0)).getUTCDate();
-      const primero = new Date(Date.UTC(2026, m, 1)).getUTCDay();
-      const hueco = (primero + 6) % 7;
-      type Celda = { num: number; bg: string; fg: string; borde: string; marca: string } | null;
-      const planas: Celda[] = [];
-      for (let i = 0; i < hueco; i++) planas.push(null);
-      for (let d = 1; d <= total; d++) {
-        const f = Date.UTC(2026, m, d);
-        const enVac = enVacacionAprobada(calEscoltaEfectivo, f);
-        const work = enJornada(f, inicioDe(calEscoltaEfectivo));
-        const c = diaCiclo(f, inicioDe(calEscoltaEfectivo));
-        const esp = m === 8 ? serviciosDe(d).length : 0;
         planas.push({
           num: d,
           bg: enVac ? color.neutral500 : work ? color.accent200 : 'transparent',
@@ -531,7 +506,10 @@ export function useApp() {
         const primerDia = celdas.find(c => c !== null) as { num: number } | undefined;
         semanas.push({ num: primerDia ? semanaDelAnio(Date.UTC(2026, m, primerDia.num)) : 0, celdas });
       }
-      return { nombre: nombre.slice(0, 3).toUpperCase(), semanas };
+      return {
+        nombre: nombre.slice(0, 3).toUpperCase(),
+        semanas, jornada, vacaciones, libranza: total - jornada - vacaciones,
+      };
     }),
     calAnioResumen: (() => {
       let j = 0, v = 0;
