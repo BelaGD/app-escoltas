@@ -45,6 +45,9 @@ export function useApp() {
 
   const coord = st.rol === 'coord';
   const tab = st.tab;
+  const MI_NOMBRE = 'Marta Ríos';
+  // El custodio solo ve su propia jornada en Agenda, sin selector de equipo.
+  const calEscoltaEfectivo = coord ? st.calEscolta : MI_NOMBRE;
 
   const porDia = useMemo(() => {
     const out: Record<number, ServicioRaw[]> = {};
@@ -105,24 +108,6 @@ export function useApp() {
       onTap: cubierto ? () => abrirDetalle(12, [s[0], s[1], s[2], s[3], cubierto]) : () => setState({ sheet: 'asignar' }),
     };
   });
-
-  // Generalización de "servicios de un día concreto, según el rol" — se usa
-  // para cualquier día de la semana mostrada, no solo uno seleccionado.
-  const serviciosParaDia = (dia: number) => {
-    const lista = serviciosDe(dia).map(s => {
-      const cubierto = s[4] || (dia === 12 ? st.cubierto : '');
-      return {
-        desde: s[0], hasta: 'fin al domicilio', cliente: s[2], tipo: s[3],
-        dotacion: cubierto || 'Sin dotación asignada',
-        dotacionColor: cubierto ? color.neutral800 : WARN,
-        bar: cubierto ? color.accent600 : WARN,
-        bg: cubierto ? 'transparent' : color.warnBg,
-        onTap: cubierto ? () => abrirDetalle(dia, [s[0], s[1], s[2], s[3], cubierto]) : () => setState({ sheet: 'asignar' }),
-      };
-    });
-    const propios = lista.filter(s => s.dotacion.indexOf('M. Ríos') >= 0);
-    return coord ? lista : propios;
-  };
 
   const filtros = ['Todos', 'Disponibles', 'En servicio', 'Fuera'].map(f => ({
     label: f, on: st.filtro === f, onTap: () => setState({ filtro: f }),
@@ -407,27 +392,28 @@ export function useApp() {
       const diasSemana = Array.from({ length: 7 }, (_, i) => {
         const f = inicioSemanaF + i * 86400000;
         const dt = new Date(f);
-        const esSept2026 = dt.getUTCFullYear() === 2026 && dt.getUTCMonth() === 8;
-        const num = dt.getUTCDate();
-        const mesAbr = MESES[dt.getUTCMonth()].slice(0, 3).toUpperCase();
-        const servicios = esSept2026 ? serviciosParaDia(num) : [];
-        return {
-          dia: DIAS_CORTO[dt.getUTCDay()], num, f, mesAbr,
-          esHoy: f === HOY,
-          carga: servicios.length + ' ev',
-          titulo: DIAS_CORTO[dt.getUTCDay()] + ' ' + num + ' ' + mesAbr,
-          meta: coord
-            ? servicios.length + (servicios.length === 1 ? ' servicio' : ' servicios')
-            : servicios.length + (servicios.length === 1 ? ' servicio mío' : ' servicios míos'),
-          servicios,
-          vacio: servicios.length === 0,
-        };
+        return { dia: DIAS_CORTO[dt.getUTCDay()], num: dt.getUTCDate(), f, esHoy: f === HOY };
       });
+      // Cuadro tipo "distributivo de personal": columnas = días de la
+      // semana mostrada, filas = escoltas. El custodio solo ve su propia fila.
+      const escoltasSemana = coord ? st.equipo : st.equipo.filter(e => e.nombre === MI_NOMBRE);
+      const semanaTabla = {
+        dias: diasSemana,
+        filas: escoltasSemana.map(e => ({
+          nombre: e.nombre, ini: e.ini,
+          celdas: diasSemana.map(d => {
+            if (e.estado === 'baja') return { txt: 'B', bg: color.warnBg, fg: color.warn };
+            if (enVacacionAprobada(e.nombre, d.f)) return { txt: 'V', bg: color.neutral500, fg: color.white };
+            if (enJornada(d.f, e.inicioJornada)) return { txt: 'T', bg: color.accent200, fg: color.accent900 };
+            return { txt: 'L', bg: 'transparent', fg: color.neutral600 };
+          }),
+        })),
+      };
       const finSemanaF = inicioSemanaF + 6 * 86400000;
       const mesIni = MESES[new Date(inicioSemanaF).getUTCMonth()].slice(0, 3).toUpperCase();
       const mesFin = MESES[new Date(finSemanaF).getUTCMonth()].slice(0, 3).toUpperCase();
       return {
-        semana: diasSemana,
+        semanaTabla,
         calSemanaLabel: mesIni === mesFin
           ? new Date(inicioSemanaF).getUTCDate() + '–' + new Date(finSemanaF).getUTCDate() + ' ' + mesIni
           : new Date(inicioSemanaF).getUTCDate() + ' ' + mesIni + ' – ' + new Date(finSemanaF).getUTCDate() + ' ' + mesFin,
@@ -438,7 +424,7 @@ export function useApp() {
 
     calVista: st.calVista,
     setCalVista: (v: AppState['calVista']) => setState({ calVista: v }),
-    calEscolta: st.calEscolta,
+    calEscolta: calEscoltaEfectivo,
     calEscoltas: st.equipo.map(e => ({ label: e.nombre.split(' ')[0], nombre: e.nombre, on: st.calEscolta === e.nombre, onTap: () => setState({ calEscolta: e.nombre }) })),
     calMesNombre: MESES[st.calMes] + ' 2026',
     calMesPrev: () => setState(s => ({ calMes: (s.calMes + 11) % 12 })),
@@ -453,9 +439,9 @@ export function useApp() {
       for (let i = 0; i < hueco; i++) out.push({ num: '', bg: 'transparent', fg: 'transparent', borde: 'transparent', marca: '' });
       for (let d = 1; d <= total; d++) {
         const f = Date.UTC(y, m, d);
-        const enVac = enVacacionAprobada(st.calEscolta, f);
-        const work = enJornada(f, inicioDe(st.calEscolta));
-        const c = diaCiclo(f, inicioDe(st.calEscolta));
+        const enVac = enVacacionAprobada(calEscoltaEfectivo, f);
+        const work = enJornada(f, inicioDe(calEscoltaEfectivo));
+        const c = diaCiclo(f, inicioDe(calEscoltaEfectivo));
         const esp = m === 8 ? serviciosDe(d).length : 0;
         out.push({
           num: d,
@@ -473,8 +459,8 @@ export function useApp() {
       let j = 0, v = 0;
       for (let d = 1; d <= total; d++) {
         const f = Date.UTC(y, m, d);
-        if (enVacacionAprobada(st.calEscolta, f)) v++;
-        else if (enJornada(f, inicioDe(st.calEscolta))) j++;
+        if (enVacacionAprobada(calEscoltaEfectivo, f)) v++;
+        else if (enJornada(f, inicioDe(calEscoltaEfectivo))) j++;
       }
       return j + ' días de jornada · ' + (total - j - v) + ' de libranza' + (v ? ' · ' + v + ' de vacaciones' : '') + ' · ciclo 14/7';
     })(),
@@ -487,9 +473,9 @@ export function useApp() {
       for (let i = 0; i < hueco; i++) dias.push({ num: '', bg: 'transparent', fg: 'transparent', borde: 'transparent', marca: '' });
       for (let d = 1; d <= total; d++) {
         const f = Date.UTC(2026, m, d);
-        const enVac = enVacacionAprobada(st.calEscolta, f);
-        const work = enJornada(f, inicioDe(st.calEscolta));
-        const c = diaCiclo(f, inicioDe(st.calEscolta));
+        const enVac = enVacacionAprobada(calEscoltaEfectivo, f);
+        const work = enJornada(f, inicioDe(calEscoltaEfectivo));
+        const c = diaCiclo(f, inicioDe(calEscoltaEfectivo));
         const esp = m === 8 ? serviciosDe(d).length : 0;
         if (enVac) vacaciones++;
         else if (work) jornada++;
@@ -512,13 +498,13 @@ export function useApp() {
         const total = new Date(Date.UTC(2026, m + 1, 0)).getUTCDate();
         for (let d = 1; d <= total; d++) {
           const f = Date.UTC(2026, m, d);
-          if (enVacacionAprobada(st.calEscolta, f)) v++;
-          else if (enJornada(f, inicioDe(st.calEscolta))) j++;
+          if (enVacacionAprobada(calEscoltaEfectivo, f)) v++;
+          else if (enJornada(f, inicioDe(calEscoltaEfectivo))) j++;
         }
       }
       return j + ' días de jornada en 2026 · ' + (365 - j - v) + ' de libranza' + (v ? ' · ' + v + ' de vacaciones' : '');
     })(),
-    calAnioVacaciones: st.solicitudes.filter(s => s.nombre === st.calEscolta && s.estado === 'aprobada').map(s => s.rango),
+    calAnioVacaciones: st.solicitudes.filter(s => s.nombre === calEscoltaEfectivo && s.estado === 'aprobada').map(s => s.rango),
 
     // ---- Vacaciones (coordinación) ----
     cupo: CUPO_DATA.map(([rango, n]) => ({
