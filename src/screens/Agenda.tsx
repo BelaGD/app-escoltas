@@ -1,23 +1,65 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import ViewShot, { ViewShotRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
 import { color, font } from '../theme/theme';
 import { Segmented, ChipRow } from '../components/ui/Segmented';
+import { Btn } from '../components/ui/Button';
 import { useApp } from '../logic/useApp';
 
 export function Agenda() {
   const app = useApp();
+  // Semana es un cuadro de turnos de todo el equipo — solo tiene sentido
+  // para coordinación. Si un custodio quedó con esa vista puesta desde
+  // antes de cambiar de rol, se cae a Mes en vez de mostrarla vacía.
+  const vista = !app.coord && app.calVista === 'Semana' ? 'Mes' : app.calVista;
+  const opciones = app.coord ? ['Semana', 'Mes', 'Año'] : ['Mes', 'Año'];
+  const shotRef = useRef<ViewShotRef>(null);
+  const [generando, setGenerando] = useState(false);
+
+  const compartir = async () => {
+    if (!shotRef.current) return;
+    setGenerando(true);
+    try {
+      const uri = await shotRef.current.capture();
+      const disponible = await Sharing.isAvailableAsync();
+      if (!disponible) {
+        Alert.alert('No disponible', 'Este dispositivo no puede abrir el cuadro de compartir.');
+        return;
+      }
+      await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Agenda · ' + vista });
+    } catch {
+      Alert.alert('Error', 'No se pudo generar la imagen de la agenda.');
+    } finally {
+      setGenerando(false);
+    }
+  };
 
   return (
     <View>
       <Segmented
-        options={['Semana', 'Mes', 'Año'].map(v => ({ label: v, on: app.calVista === v, onTap: () => app.setCalVista(v as any) }))}
+        options={opciones.map(v => ({ label: v, on: vista === v, onTap: () => app.setCalVista(v as any) }))}
         small
       />
       <View style={{ height: 14 }} />
 
-      {app.calVista === 'Semana' && <SemanaView />}
-      {app.calVista === 'Mes' && <MesView />}
-      {app.calVista === 'Año' && <AnioView />}
+      {app.coord && (
+        <Btn
+          label={generando ? 'Generando…' : 'Compartir ' + vista.toLowerCase() + ' por WhatsApp'}
+          onPress={compartir}
+          disabled={generando}
+          block
+          style={{ marginBottom: 14 }}
+        />
+      )}
+
+      <ViewShot ref={shotRef} options={{ format: 'png', quality: 1 }}>
+        <View style={styles.shot}>
+          {vista === 'Semana' && <SemanaView />}
+          {vista === 'Mes' && <MesView />}
+          {vista === 'Año' && <AnioView />}
+        </View>
+      </ViewShot>
     </View>
   );
 }
@@ -146,6 +188,7 @@ function AnioView() {
 }
 
 const styles = StyleSheet.create({
+  shot: { backgroundColor: color.bg, padding: 2 },
   tabla: { borderWidth: 1, borderColor: color.neutral300, marginBottom: 14 },
   tablaRow: { flexDirection: 'row', alignItems: 'stretch' },
   tablaNombreCol: { width: 96, paddingVertical: 6, paddingHorizontal: 6, justifyContent: 'center' },
