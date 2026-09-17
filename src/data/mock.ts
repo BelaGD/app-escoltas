@@ -173,11 +173,6 @@ export const MIS_SOLICITUDES_INICIALES: MiSolicitud[] = [
   { id: 'm2', rango: '04 AGO – 22 AGO', desde: '2026-08-04', hasta: '2026-08-22', dias: '15 días laborables', estado: 'aprobada' },
 ];
 
-export const CUPO_DATA: [string, number][] = [
-  ['1–7', 2], ['8–14', 3], ['15–21', 1], ['22–28', 2], ['29–5', 3], ['6–12', 0],
-];
-
-
 export interface Notif {
   id: string;
   tipo: string;

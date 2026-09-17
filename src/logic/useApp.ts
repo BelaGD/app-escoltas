@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useStore, AppState, Patch, Fichaje } from '../state/store';
 import {
-  EST, SEMANA, MESES, DIA_SERV, EST_PROT, CUPO_DATA,
+  EST, SEMANA, MESES, DIA_SERV, EST_PROT,
   HOY, WARN, MUT, AC, Escolta, Protegido, ServicioRaw, MiSolicitud, Solicitud,
 } from '../data/mock';
 import { color } from '../theme/theme';
@@ -526,11 +526,30 @@ export function useApp() {
     calAnioVacaciones: st.solicitudes.filter(s => s.nombre === calEscoltaEfectivo && s.estado === 'aprobada').map(s => s.rango),
 
     // ---- Vacaciones (coordinación) ----
-    cupo: CUPO_DATA.map(([rango, n]) => ({
-      rango, alto: (n / 3) * 100 + '%',
-      color: n >= 3 ? WARN : n === 0 ? color.neutral300 : color.accent500,
-      txt: n + '/3',
-    })),
+    // Cupo real: cuenta, semana a semana desde el día 1 del mes actual,
+    // cuántos escoltas tienen vacaciones aprobadas que se solapan con esa
+    // semana — ya no son números de ejemplo fijos.
+    cupoMesNombre: MESES[new Date(HOY).getUTCMonth()],
+    cupo: (() => {
+      const CUPO_MAX = 3;
+      const y = new Date(HOY).getUTCFullYear();
+      const m = new Date(HOY).getUTCMonth();
+      const inicioMes = Date.UTC(y, m, 1);
+      return Array.from({ length: 6 }, (_, i) => {
+        const desdeSemana = inicioMes + i * 7 * 86400000;
+        const hastaSemana = desdeSemana + 6 * 86400000;
+        const rango = new Date(desdeSemana).getUTCDate() + '–' + new Date(hastaSemana).getUTCDate();
+        const n = st.equipo.filter(e => st.solicitudes.some(s =>
+          s.nombre === e.nombre && s.estado === 'aprobada' && s.desde && s.hasta
+          && isoToUtcMs(s.hasta) >= desdeSemana && isoToUtcMs(s.desde) <= hastaSemana
+        )).length;
+        return {
+          rango, alto: Math.min((n / CUPO_MAX) * 100, 100) + '%',
+          color: n >= CUPO_MAX ? WARN : n === 0 ? color.neutral300 : color.accent500,
+          txt: n + '/' + CUPO_MAX,
+        };
+      });
+    })(),
     pendientes: pend.map(p => ({
       nombre: p.nombre, rango: p.rango, dias: p.dias, aviso: p.aviso, avisoColor: p.warn ? WARN : MUT,
       onAprobar: () => resolver(p.id, 'aprobada', p.nombre),
