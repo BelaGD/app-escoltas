@@ -159,6 +159,24 @@ export function useApp() {
     return { esHoy, total, vac, baja, conProt, libres, libranza };
   };
 
+  // Cupo de vacaciones: 6 semanas desde el día 1 del mes en curso, y cuántos
+  // escoltas tienen vacaciones APROBADAS que se solapan con cada una.
+  // Se comparte entre el gráfico de coordinación y el aviso del formulario
+  // de solicitud del escolta, para que ambos digan siempre lo mismo.
+  const CUPO_MAX = 3;
+  const cupoSemanas = Array.from({ length: 6 }, (_, i) => {
+    const y = new Date(HOY).getUTCFullYear();
+    const mesHoy = new Date(HOY).getUTCMonth();
+    const inicioMes = Date.UTC(y, mesHoy, 1);
+    const desdeSemana = inicioMes + i * 7 * 86400000;
+    const hastaSemana = desdeSemana + 6 * 86400000;
+    const n = st.equipo.filter(e => st.solicitudes.some(s =>
+      s.nombre === e.nombre && s.estado === 'aprobada' && s.desde && s.hasta
+      && isoToUtcMs(s.hasta) >= desdeSemana && isoToUtcMs(s.desde) <= hastaSemana
+    )).length;
+    return { desdeSemana, hastaSemana, n };
+  });
+
   const fechaDotParsed = (() => {
     const p = (st.fechaDot || '').split('-').map(Number);
     const valida = p.length === 3 && p.every(n => Number.isFinite(n) && n > 0) && p[0] >= 2026 && p[0] <= 2030 && p[1] <= 12 && p[2] <= 31;
@@ -530,26 +548,12 @@ export function useApp() {
     // cuántos escoltas tienen vacaciones aprobadas que se solapan con esa
     // semana — ya no son números de ejemplo fijos.
     cupoMesNombre: MESES[new Date(HOY).getUTCMonth()],
-    cupo: (() => {
-      const CUPO_MAX = 3;
-      const y = new Date(HOY).getUTCFullYear();
-      const m = new Date(HOY).getUTCMonth();
-      const inicioMes = Date.UTC(y, m, 1);
-      return Array.from({ length: 6 }, (_, i) => {
-        const desdeSemana = inicioMes + i * 7 * 86400000;
-        const hastaSemana = desdeSemana + 6 * 86400000;
-        const rango = new Date(desdeSemana).getUTCDate() + '–' + new Date(hastaSemana).getUTCDate();
-        const n = st.equipo.filter(e => st.solicitudes.some(s =>
-          s.nombre === e.nombre && s.estado === 'aprobada' && s.desde && s.hasta
-          && isoToUtcMs(s.hasta) >= desdeSemana && isoToUtcMs(s.desde) <= hastaSemana
-        )).length;
-        return {
-          rango, alto: Math.min((n / CUPO_MAX) * 100, 100) + '%',
-          color: n >= CUPO_MAX ? WARN : n === 0 ? color.neutral300 : color.accent500,
-          txt: n + '/' + CUPO_MAX,
-        };
-      });
-    })(),
+    cupo: cupoSemanas.map(({ desdeSemana, hastaSemana, n }) => ({
+      rango: new Date(desdeSemana).getUTCDate() + '–' + new Date(hastaSemana).getUTCDate(),
+      alto: Math.min((n / CUPO_MAX) * 100, 100) + '%',
+      color: n >= CUPO_MAX ? WARN : n === 0 ? color.neutral300 : color.accent500,
+      txt: n + '/' + CUPO_MAX,
+    })),
     pendientes: pend.map(p => ({
       nombre: p.nombre, rango: p.rango, dias: p.dias, aviso: p.aviso, avisoColor: p.warn ? WARN : MUT,
       onAprobar: () => resolver(p.id, 'aprobada', p.nombre),
@@ -720,7 +724,17 @@ export function useApp() {
     setDesde: (v: string) => setState({ vacDesde: v }),
     setHasta: (v: string) => setState({ vacHasta: v }),
     setMotivo: (v: string) => setState({ vacMotivo: v }),
-    cupoAviso: 'Semana del 13 OCT: 1 de 3 plazas ocupadas. Tu solicitud entraría sin conflicto.',
+    // Mismo cupo real que ve coordinación, pero mirando la fecha "Desde"
+    // que el escolta está por enviar — antes era un texto de ejemplo fijo.
+    cupoAviso: (() => {
+      const desdeF = isoToUtcMs(localDateToIso(dmyToLocalDate(st.vacDesde)));
+      const semana = cupoSemanas.find(sem => desdeF >= sem.desdeSemana && desdeF <= sem.hastaSemana);
+      if (!semana) return 'Ese cupo solo se controla para ' + MESES[new Date(HOY).getUTCMonth()] + ' — fuera de ese mes no hay dato de plazas.';
+      const rango = new Date(semana.desdeSemana).getUTCDate() + '–' + new Date(semana.hastaSemana).getUTCDate() + ' ' + MESES[new Date(HOY).getUTCMonth()].slice(0, 3).toUpperCase();
+      return semana.n >= CUPO_MAX
+        ? 'Semana del ' + rango + ': cupo lleno (' + semana.n + '/' + CUPO_MAX + '). Podría generar conflicto.'
+        : 'Semana del ' + rango + ': ' + semana.n + ' de ' + CUPO_MAX + ' plazas ocupadas. Tu solicitud entraría ' + (semana.n === 0 ? 'sin conflicto' : 'con margen') + '.';
+    })(),
     enviarSolicitud: () => {
       if (dmyToLocalDate(st.vacHasta).getTime() < dmyToLocalDate(st.vacDesde).getTime()) {
         flash('La fecha "Hasta" no puede ser anterior a "Desde"');
