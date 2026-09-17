@@ -106,19 +106,23 @@ export function useApp() {
     };
   });
 
-  const diaServ = serviciosDe(st.dia).map(s => {
-    const cubierto = s[4] || (st.dia === 12 ? st.cubierto : '');
-    return {
-      desde: s[0], hasta: 'fin al domicilio', cliente: s[2], tipo: s[3],
-      dotacion: cubierto || 'Sin dotación asignada',
-      dotacionColor: cubierto ? color.neutral800 : WARN,
-      bar: cubierto ? color.accent600 : WARN,
-      bg: cubierto ? 'transparent' : color.warnBg,
-      onTap: cubierto ? () => abrirDetalle(st.dia, [s[0], s[1], s[2], s[3], cubierto]) : () => setState({ sheet: 'asignar' }),
-    };
-  });
-  const misDia = diaServ.filter(s => s.dotacion.indexOf('M. Ríos') >= 0);
-  const diaLista = coord ? diaServ : misDia;
+  // Generalización de "servicios de un día concreto, según el rol" — se usa
+  // para cualquier día de la semana mostrada, no solo uno seleccionado.
+  const serviciosParaDia = (dia: number) => {
+    const lista = serviciosDe(dia).map(s => {
+      const cubierto = s[4] || (dia === 12 ? st.cubierto : '');
+      return {
+        desde: s[0], hasta: 'fin al domicilio', cliente: s[2], tipo: s[3],
+        dotacion: cubierto || 'Sin dotación asignada',
+        dotacionColor: cubierto ? color.neutral800 : WARN,
+        bar: cubierto ? color.accent600 : WARN,
+        bg: cubierto ? 'transparent' : color.warnBg,
+        onTap: cubierto ? () => abrirDetalle(dia, [s[0], s[1], s[2], s[3], cubierto]) : () => setState({ sheet: 'asignar' }),
+      };
+    });
+    const propios = lista.filter(s => s.dotacion.indexOf('M. Ríos') >= 0);
+    return coord ? lista : propios;
+  };
 
   const filtros = ['Todos', 'Disponibles', 'En servicio', 'Fuera'].map(f => ({
     label: f, on: st.filtro === f, onTap: () => setState({ filtro: f }),
@@ -405,39 +409,32 @@ export function useApp() {
         const dt = new Date(f);
         const esSept2026 = dt.getUTCFullYear() === 2026 && dt.getUTCMonth() === 8;
         const num = dt.getUTCDate();
+        const mesAbr = MESES[dt.getUTCMonth()].slice(0, 3).toUpperCase();
+        const servicios = esSept2026 ? serviciosParaDia(num) : [];
         return {
-          dia: DIAS_CORTO[dt.getUTCDay()], num, f,
-          mesAbr: MESES[dt.getUTCMonth()].slice(0, 3).toUpperCase(),
-          carga: (esSept2026 ? serviciosDe(num).length : 0) + ' ev',
-          onTap: () => setState({ dia: num }),
-          active: st.dia === num,
+          dia: DIAS_CORTO[dt.getUTCDay()], num, f, mesAbr,
+          esHoy: f === HOY,
+          carga: servicios.length + ' ev',
+          titulo: DIAS_CORTO[dt.getUTCDay()] + ' ' + num + ' ' + mesAbr,
+          meta: coord
+            ? servicios.length + (servicios.length === 1 ? ' servicio' : ' servicios')
+            : servicios.length + (servicios.length === 1 ? ' servicio mío' : ' servicios míos'),
+          servicios,
+          vacio: servicios.length === 0,
         };
       });
       const finSemanaF = inicioSemanaF + 6 * 86400000;
       const mesIni = MESES[new Date(inicioSemanaF).getUTCMonth()].slice(0, 3).toUpperCase();
       const mesFin = MESES[new Date(finSemanaF).getUTCMonth()].slice(0, 3).toUpperCase();
-      const diaActivo = diasSemana.find(d => d.active);
       return {
         semana: diasSemana,
         calSemanaLabel: mesIni === mesFin
           ? new Date(inicioSemanaF).getUTCDate() + '–' + new Date(finSemanaF).getUTCDate() + ' ' + mesIni
           : new Date(inicioSemanaF).getUTCDate() + ' ' + mesIni + ' – ' + new Date(finSemanaF).getUTCDate() + ' ' + mesFin,
-        calSemanaPrev: () => setState(s => {
-          const nueva = isoToUtcMs(s.calSemanaInicio) - 7 * 86400000;
-          return { calSemanaInicio: utcMsToIso(nueva), dia: new Date(nueva).getUTCDate() };
-        }),
-        calSemanaNext: () => setState(s => {
-          const nueva = isoToUtcMs(s.calSemanaInicio) + 7 * 86400000;
-          return { calSemanaInicio: utcMsToIso(nueva), dia: new Date(nueva).getUTCDate() };
-        }),
-        diaTitulo: (diaActivo?.dia || 'SÁB') + ' ' + st.dia + ' ' + (diaActivo?.mesAbr || 'SEP'),
+        calSemanaPrev: () => setState(s => ({ calSemanaInicio: utcMsToIso(isoToUtcMs(s.calSemanaInicio) - 7 * 86400000) })),
+        calSemanaNext: () => setState(s => ({ calSemanaInicio: utcMsToIso(isoToUtcMs(s.calSemanaInicio) + 7 * 86400000) })),
       };
     })(),
-    diaSel: st.dia,
-    diaMeta: coord ? diaServ.length + (diaServ.length === 1 ? ' servicio' : ' servicios')
-      : misDia.length + (misDia.length === 1 ? ' servicio mío' : ' servicios míos'),
-    diaServicios: diaLista,
-    diaVacio: diaLista.length === 0,
 
     calVista: st.calVista,
     setCalVista: (v: AppState['calVista']) => setState({ calVista: v }),
@@ -485,16 +482,24 @@ export function useApp() {
       const total = new Date(Date.UTC(2026, m + 1, 0)).getUTCDate();
       const primero = new Date(Date.UTC(2026, m, 1)).getUTCDay();
       const hueco = (primero + 6) % 7;
-      const dias: { bg: string }[] = [];
+      const dias: { num: number | ''; bg: string; fg: string; borde: string; marca: string }[] = [];
       let jornada = 0, vacaciones = 0;
-      for (let i = 0; i < hueco; i++) dias.push({ bg: 'transparent' });
+      for (let i = 0; i < hueco; i++) dias.push({ num: '', bg: 'transparent', fg: 'transparent', borde: 'transparent', marca: '' });
       for (let d = 1; d <= total; d++) {
         const f = Date.UTC(2026, m, d);
         const enVac = enVacacionAprobada(st.calEscolta, f);
         const work = enJornada(f, inicioDe(st.calEscolta));
+        const c = diaCiclo(f, inicioDe(st.calEscolta));
+        const esp = m === 8 ? serviciosDe(d).length : 0;
         if (enVac) vacaciones++;
         else if (work) jornada++;
-        dias.push({ bg: enVac ? color.neutral500 : work ? color.accent500 : color.neutral200 });
+        dias.push({
+          num: d,
+          bg: enVac ? color.neutral500 : work ? color.accent200 : 'transparent',
+          fg: enVac ? color.white : work ? color.accent900 : color.neutral600,
+          borde: c === 0 ? color.accent700 : color.neutral300,
+          marca: esp ? '●' : '',
+        });
       }
       return {
         nombre: nombre.slice(0, 3).toUpperCase(),
@@ -852,7 +857,7 @@ export function useApp() {
       if (st.editandoServicioId) {
         const id = st.editandoServicioId;
         setState(s => ({
-          sheet: null, dia: n.dia, editandoServicioId: null,
+          sheet: null, editandoServicioId: null,
           extra: s.extra.map(e => e.id === id
             ? { ...e, dia: n.dia, desde: n.desde, protegido: n.protegido, tipo: n.tipo, lugar: n.lugar || 'Lugar por confirmar', dotacion: n.dotacion.join(' · ') }
             : e),
@@ -860,7 +865,7 @@ export function useApp() {
         flash('Servicio actualizado · ' + n.protegido);
       } else {
         setState(s => ({
-          sheet: null, dia: n.dia,
+          sheet: null,
           extra: s.extra.concat([{ id: 's' + Date.now(), dia: n.dia, desde: n.desde, hasta: '', protegido: n.protegido, tipo: n.tipo, lugar: n.lugar || 'Lugar por confirmar', dotacion: n.dotacion.join(' · ') }]),
         }));
         flash('Servicio especial creado · ' + n.protegido);

@@ -34,45 +34,48 @@ function SemanaView() {
       </View>
       <View style={styles.weekRow}>
         {app.semana.map(d => (
-          <Pressable
+          <View
             key={d.f}
-            onPress={d.onTap}
             style={[
               styles.weekDay,
-              { borderColor: d.active ? color.accent700 : color.neutral300, backgroundColor: d.active ? color.accent700 : 'transparent' },
+              { borderColor: d.esHoy ? color.accent700 : color.neutral300, backgroundColor: d.esHoy ? color.accent700 : 'transparent' },
             ]}
           >
-            <Text style={[styles.weekDayLabel, { color: d.active ? color.white : color.text, opacity: 0.75 }]}>{d.dia}</Text>
-            <Text style={[styles.weekDayNum, { color: d.active ? color.white : color.text }]}>{d.num}</Text>
-            <Text style={[styles.weekDayCarga, { color: d.active ? color.white : color.text, opacity: 0.75 }]}>{d.carga}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <View style={styles.diaHeadRow}>
-        <Text style={styles.diaTitulo}>{app.diaTitulo}</Text>
-        <Text style={styles.diaMeta}>{app.diaMeta}</Text>
-      </View>
-
-      <View>
-        {app.diaServicios.map((sv, i) => (
-          <View key={i} style={styles.timelineRow}>
-            <View style={{ width: 52, paddingTop: 2, alignItems: 'flex-end' }}>
-              <Text style={styles.timeDesde}>{sv.desde}</Text>
-              <Text style={styles.timeHasta}>{sv.hasta}</Text>
-            </View>
-            <View style={styles.timelineLine}>
-              <View style={[styles.timelineDot, { backgroundColor: sv.bar }]} />
-            </View>
-            <Pressable onPress={sv.onTap} style={[styles.timelineCard, { backgroundColor: sv.bg }]}>
-              <Text style={styles.timelineCliente} numberOfLines={1}>{sv.cliente}</Text>
-              <Text style={styles.timelineTipo} numberOfLines={1}>{sv.tipo}</Text>
-              <Text style={[styles.timelineDot2, { color: sv.dotacionColor }]}>{sv.dotacion}</Text>
-            </Pressable>
+            <Text style={[styles.weekDayLabel, { color: d.esHoy ? color.white : color.text, opacity: 0.75 }]}>{d.dia}</Text>
+            <Text style={[styles.weekDayNum, { color: d.esHoy ? color.white : color.text }]}>{d.num}</Text>
+            <Text style={[styles.weekDayCarga, { color: d.esHoy ? color.white : color.text, opacity: 0.75 }]}>{d.carga}</Text>
           </View>
         ))}
       </View>
-      {app.diaVacio && <EmptyHint text="Sin servicios asignados este día." />}
+
+      {app.semana.map(d => (
+        <View key={d.f} style={{ marginBottom: 18 }}>
+          <View style={styles.diaHeadRow}>
+            <Text style={styles.diaTitulo}>{d.titulo}</Text>
+            <Text style={styles.diaMeta}>{d.meta}</Text>
+          </View>
+
+          <View>
+            {d.servicios.map((sv, i) => (
+              <View key={i} style={styles.timelineRow}>
+                <View style={{ width: 52, paddingTop: 2, alignItems: 'flex-end' }}>
+                  <Text style={styles.timeDesde}>{sv.desde}</Text>
+                  <Text style={styles.timeHasta}>{sv.hasta}</Text>
+                </View>
+                <View style={styles.timelineLine}>
+                  <View style={[styles.timelineDot, { backgroundColor: sv.bar }]} />
+                </View>
+                <Pressable onPress={sv.onTap} style={[styles.timelineCard, { backgroundColor: sv.bg }]}>
+                  <Text style={styles.timelineCliente} numberOfLines={1}>{sv.cliente}</Text>
+                  <Text style={styles.timelineTipo} numberOfLines={1}>{sv.tipo}</Text>
+                  <Text style={[styles.timelineDot2, { color: sv.dotacionColor }]}>{sv.dotacion}</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+          {d.vacio && <EmptyHint text="Sin servicios asignados este día." />}
+        </View>
+      ))}
     </View>
   );
 }
@@ -121,9 +124,11 @@ function AnioView() {
       <View style={{ height: 12 }} />
       <Text style={styles.anioTitulo}>2026 · ciclo 14/7</Text>
       <View style={styles.legendRow}>
-        <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: color.accent500 }]} /><Text style={styles.legendText}>Jornada</Text></View>
-        <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: color.neutral200 }]} /><Text style={styles.legendText}>Libranza</Text></View>
-        <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: color.neutral500 }]} /><Text style={styles.legendText}>Vacaciones</Text></View>
+        <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: color.accent200, borderColor: color.neutral300 }]} /><Text style={styles.legendText}>Jornada</Text></View>
+        <View style={styles.legendItem}><View style={[styles.legendSwatch, { borderColor: color.neutral300 }]} /><Text style={styles.legendText}>Libranza</Text></View>
+        <View style={styles.legendItem}><View style={[styles.legendSwatch, { backgroundColor: color.neutral500, borderColor: color.neutral500 }]} /><Text style={styles.legendText}>Vacaciones</Text></View>
+        <View style={styles.legendItem}><View style={[styles.legendSwatch, { borderColor: color.accent700 }]} /><Text style={styles.legendText}>Inicio de ciclo</Text></View>
+        <View style={styles.legendItem}><Text style={[styles.legendText, { color: color.accent700 }]}>● Servicio especial</Text></View>
       </View>
       <View style={styles.anioGrid}>
         {app.calAnio.map((m, i) => (
@@ -132,7 +137,10 @@ function AnioView() {
             <View style={styles.anioMesDivider} />
             <View style={styles.anioMesGrid}>
               {m.dias.map((d, j) => (
-                <View key={j} style={[styles.anioMesDia, { backgroundColor: d.bg, borderColor: d.bg === 'transparent' ? 'transparent' : color.neutral300 }]} />
+                <View key={j} style={[styles.anioMesDia, { backgroundColor: d.bg, borderColor: d.num === '' ? 'transparent' : d.borde }]}>
+                  {d.num !== '' && <Text style={[styles.anioMesDiaNum, { color: d.fg }]}>{d.num}</Text>}
+                  {!!d.marca && <Text style={styles.anioMesDiaMarca}>{d.marca}</Text>}
+                </View>
               ))}
             </View>
             <Text style={styles.anioMesStat}>{m.jornada}j · {m.libranza}l{m.vacaciones ? ' · ' + m.vacaciones + 'v' : ''}</Text>
@@ -188,7 +196,9 @@ const styles = StyleSheet.create({
   anioMesNombre: { fontFamily: font.heading, fontSize: 13, letterSpacing: 1.5, color: color.text },
   anioMesDivider: { height: 1, backgroundColor: color.neutral200, marginTop: 6, marginBottom: 10 },
   anioMesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2.5 },
-  anioMesDia: { width: 15, height: 15, borderWidth: 1 },
+  anioMesDia: { width: 17, height: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  anioMesDiaNum: { fontFamily: font.heading, fontSize: 7.5, lineHeight: 8 },
+  anioMesDiaMarca: { fontSize: 5, lineHeight: 5, color: color.accent700, position: 'absolute', top: 1, right: 1 },
   anioMesStat: { fontSize: 10.5, color: color.neutral600, marginTop: 10, fontFamily: font.body },
   vacBox: { borderWidth: 1, borderColor: color.neutral300, padding: 12, marginTop: 14 },
   vacTitulo: { fontFamily: font.heading, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: color.neutral700, marginBottom: 6 },

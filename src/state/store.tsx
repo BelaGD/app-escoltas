@@ -68,7 +68,6 @@ export interface NuevoServicio {
 export interface AppState {
   rol: Rol;
   tab: Tab;
-  dia: number;
   filtro: string;
   buscarEquipo: string;
   fichaId: number | null;
@@ -119,7 +118,6 @@ export interface AppState {
 export const initialState: AppState = {
   rol: 'coord',
   tab: 'hoy',
-  dia: 12,
   filtro: 'Todos',
   buscarEquipo: '',
   fichaId: null,
