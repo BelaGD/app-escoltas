@@ -93,6 +93,7 @@ export interface AppState {
   refuerzo: boolean;
   confirmado: boolean;
   cerrado: string;
+  horaSalidaHoy: string;
   horaSalidaManana: string;
   fechaDot: string;
   calVista: CalVista;
@@ -144,6 +145,7 @@ export const initialState: AppState = {
   refuerzo: true,
   confirmado: false,
   cerrado: '',
+  horaSalidaHoy: '06:00',
   horaSalidaManana: '06:00',
   fechaDot: '2026-09-12',
   calVista: 'Semana',

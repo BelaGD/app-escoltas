@@ -676,7 +676,7 @@ export function useApp() {
       const abierto = st.fichajes.find(f => f.escoltaNombre === MI_NOMBRE && !f.horaCierre);
       const cerrado = st.fichajes.find(f => f.escoltaNombre === MI_NOMBRE && f.horaCierre);
       return {
-        hora: st.horaSalidaManana,
+        hora: st.horaSalidaHoy,
         cliente: 'Jornada con ' + (protDe(MI_NOMBRE) || suplenteDe(MI_NOMBRE) || { nombre: 'protegido por asignar' }).nombre,
         punto: 'Recogida en residencia · Pº de la Castellana 142. Fin de jornada al dejar al protegido en su domicilio.',
         cta: st.confirmado ? 'En puesto desde las ' + (abierto?.horaConfirmado || cerrado?.horaConfirmado || '') : 'Confirmar que estoy en puesto',
@@ -715,9 +715,9 @@ export function useApp() {
       }
       return 'Sin datos de ciclo';
     })(),
-    // Hora de salida avisada por el protegido — varía día a día, la avisa
-    // por la tarde para el día siguiente, así que la registra el escolta
-    // en vez de venir fija en el dato del protegido.
+    // Hora de salida de MAÑANA, distinta de horaSalidaHoy (usada en
+    // mio.hora): el protegido la avisa por la tarde, al cerrar la jornada
+    // de hoy, para el día siguiente — cambiarla no debe tocar la de hoy.
     horaSalidaManana: st.horaSalidaManana,
     setHoraSalidaManana: (v: string) => setState({ horaSalidaManana: v }),
     confirmar: () => {
