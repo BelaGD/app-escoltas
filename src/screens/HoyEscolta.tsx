@@ -35,18 +35,23 @@ export function HoyEscolta() {
 
       <Blueprint style={styles.jornadaBox} borderColor={color.accent600}>
         <Text style={styles.kickerAccent}>Tu próxima jornada</Text>
+        <Text style={styles.fecha}>{mio.fecha}</Text>
         <Text style={styles.hora}>{mio.hora}</Text>
         <Text style={styles.cliente}>{mio.cliente}</Text>
         <Text style={styles.punto}>{mio.punto}</Text>
         <Text style={styles.nota}>{mio.nota}</Text>
-        {mio.enServicio && <Btn label={mio.ctaCierre} variant="primary" block onPress={app.cerrarJornada} />}
-        {mio.cerrado ? (
-          <Btn label="Ver detalle" variant="secondary" onPress={app.verDetalleJornada} block small style={{ marginTop: 12 }} />
-        ) : (
-          <View style={styles.ctaRow}>
-            <Btn label={mio.cta} variant="primary" onPress={app.confirmar} style={{ flex: 1 }} small />
-            <Btn label="Ver detalle" variant="secondary" onPress={app.verDetalleJornada} style={{ flex: 1 }} small />
-          </View>
+        {!mio.esLibranzaHoy && (
+          <>
+            {mio.enServicio && <Btn label={mio.ctaCierre} variant="primary" block onPress={app.cerrarJornada} />}
+            {mio.cerrado ? (
+              <Btn label="Ver detalle" variant="secondary" onPress={app.verDetalleJornada} block small style={{ marginTop: 12 }} />
+            ) : (
+              <View style={styles.ctaRow}>
+                <Btn label={mio.cta} variant="primary" onPress={app.confirmar} style={{ flex: 1 }} small />
+                <Btn label="Ver detalle" variant="secondary" onPress={app.verDetalleJornada} style={{ flex: 1 }} small />
+              </View>
+            )}
+          </>
         )}
       </Blueprint>
 
@@ -95,7 +100,8 @@ const styles = StyleSheet.create({
   proximaBox: { borderWidth: 1, borderColor: color.neutral300, padding: 12, marginTop: -2, marginBottom: 16 },
   proximaFecha: { fontFamily: font.heading, fontSize: 20, color: color.text, marginTop: 3 },
   kickerAccent: { fontFamily: font.heading, fontSize: 10.5, letterSpacing: 2, textTransform: 'uppercase', color: color.accent700 },
-  hora: { fontFamily: font.heading, fontSize: 34, lineHeight: 36, color: color.text, marginTop: 6 },
+  fecha: { fontSize: 12, color: color.neutral700, marginTop: 6, fontFamily: font.body },
+  hora: { fontFamily: font.heading, fontSize: 34, lineHeight: 36, color: color.text },
   cliente: { fontSize: 15, fontWeight: '600', color: color.text, marginTop: 6, fontFamily: font.bodySemiBold },
   punto: { fontSize: 12.5, color: color.neutral700, marginTop: 3, fontFamily: font.body },
   nota: { fontSize: 11.5, color: color.neutral600, marginTop: 6, fontFamily: font.body },

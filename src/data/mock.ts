@@ -1,6 +1,8 @@
 // Mock data ported verbatim from the Claude Design prototype
 // (project/Turnos Escoltas.dc.html, lines 822-921).
-// "Today" in the prototype's fixed sample data is always Saturday 12 Sep 2026.
+// The sample data (special services, seeded vacations) was written around
+// the prototype's original "today" of Saturday 12 Sep 2026, and only has
+// real coverage for that September — see DIA_SERV below.
 
 import { color } from '../theme/theme';
 
@@ -8,7 +10,11 @@ export const WARN = color.warn;
 export const MUT = color.neutral600;
 export const AC = color.accent700;
 
-export const HOY = Date.UTC(2026, 8, 12);
+// "Hoy" sincronizado con la fecha real del dispositivo, no un dato fijo de
+// ejemplo — se calcula una sola vez al abrir la app (día calendario local,
+// guardado como medianoche UTC, igual que el resto de fechas de la app).
+const ahora = new Date();
+export const HOY = Date.UTC(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
 
 export type EstadoEscolta = 'servicio' | 'disponible' | 'descanso' | 'vacaciones' | 'baja';
 

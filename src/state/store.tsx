@@ -11,6 +11,13 @@ import {
   Solicitud,
   SOLICITUDES_INICIALES,
 } from '../data/mock';
+import { localDateToIso } from '../logic/date';
+
+// Los valores por defecto de "Consultar fecha" y Agenda arrancan en la
+// semana/mes real de hoy, no fijos en septiembre de 2026.
+const hoyReal = new Date();
+const lunesDeEstaSemana = new Date(hoyReal);
+lunesDeEstaSemana.setDate(hoyReal.getDate() - ((hoyReal.getDay() + 6) % 7));
 
 export type Rol = 'coord' | 'escolta';
 export type Tab = 'hoy' | 'cal' | 'vac' | 'prot' | 'equipo' | 'perfil' | 'ficha' | 'notif' | 'ajustes' | 'reporte';
@@ -147,11 +154,11 @@ export const initialState: AppState = {
   cerrado: '',
   horaSalidaHoy: '06:00',
   horaSalidaManana: '06:00',
-  fechaDot: '2026-09-12',
+  fechaDot: localDateToIso(hoyReal),
   calVista: 'Semana',
   calEscolta: 'Marta Ríos',
-  calMes: 8,
-  calSemanaInicio: '2026-09-07',
+  calMes: hoyReal.getMonth(),
+  calSemanaInicio: localDateToIso(lunesDeEstaSemana),
   extra: [],
   asig: {},
   cancelados: [],

@@ -54,7 +54,29 @@ export function useApp() {
   const coord = st.rol === 'coord';
   const tab = st.tab;
   const DIAS_CORTO = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+  const DIAS_LARGO = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const MI_NOMBRE = 'Marta Ríos';
+  // "Hoy" con la fecha real (HOY ya está sincronizado con el dispositivo),
+  // en vez del "Sábado 12 SEP" fijo que traía el prototipo.
+  const hoyLabel = DIAS_LARGO[new Date(HOY).getUTCDay()] + ' ' + new Date(HOY).getUTCDate() + ' ' + MESES[new Date(HOY).getUTCMonth()].slice(0, 3).toUpperCase();
+  // Día del mes de HOY — los servicios especiales de ejemplo (DIA_SERV)
+  // están indexados por día del mes, no por fecha completa; antes se
+  // usaba el 12 fijo del prototipo, ahora HOY se mueve con el calendario.
+  const hoyDiaMes = new Date(HOY).getUTCDate();
+  // Próximo día real de jornada de un escolta según su ciclo 14/7, buscando
+  // desde mañana — se usa tanto para "tras cerrar hoy, ¿cuándo es la
+  // siguiente?" como para "hoy es libranza, ¿cuándo vuelvo a trabajar?".
+  const proximaJornadaDe = (nombre: string) => {
+    const inicio = st.equipo.find(e => e.nombre === nombre)?.inicioJornada || '2026-01-01';
+    for (let i = 1; i <= 30; i++) {
+      const f = HOY + i * 86400000;
+      if (enJornada(f, inicio)) {
+        const dt = new Date(f);
+        return { f, txt: DIAS_CORTO[dt.getUTCDay()] + ' ' + dt.getUTCDate() + ' ' + MESES[dt.getUTCMonth()].slice(0, 3).toUpperCase() };
+      }
+    }
+    return { f: null as number | null, txt: 'Sin datos de ciclo' };
+  };
   // El custodio solo ve su propia jornada en Agenda, sin selector de equipo.
   const calEscoltaEfectivo = coord ? st.calEscolta : MI_NOMBRE;
 
@@ -83,7 +105,7 @@ export function useApp() {
   };
 
   const heads: Record<string, [string, string]> = {
-    hoy: coord ? ['Mando · Sábado 12 SEP', 'Hoy'] : ['Escolta · Sábado 12 SEP', 'Mi jornada'],
+    hoy: coord ? ['Mando · ' + hoyLabel, 'Hoy'] : ['Escolta · ' + hoyLabel, 'Mi jornada'],
     cal: ['Semana 37', 'Calendario'],
     vac: coord ? ['Solicitudes y cupo', 'Vacaciones'] : ['Saldo y solicitudes', 'Vacaciones'],
     prot: ['Familia Ferrán-Rivas', 'Protegidos'],
@@ -104,7 +126,7 @@ export function useApp() {
     : [['hoy', 'Hoy'], ['cal', 'Agenda'], ['vac', 'Vacac.'], ['perfil', 'Perfil']];
   const activeTab = tab === 'ficha' ? 'equipo' : tab === 'reporte' ? 'hoy' : tab;
 
-  const servHoy = serviciosDe(12).map(s => {
+  const servHoy = serviciosDe(hoyDiaMes).map(s => {
     const cubierto = s[4] || st.cubierto;
     return {
       desde: s[0], hasta: 'fin al domicilio', cliente: s[2], tipo: s[3],
@@ -114,7 +136,7 @@ export function useApp() {
       bg: cubierto ? 'transparent' : color.warnBg,
       estado: cubierto ? 'CUBIERTO' : 'SIN CUBRIR',
       tag: (cubierto ? 'outline' : 'accent') as TagKind,
-      onTap: cubierto ? () => abrirDetalle(12, [s[0], s[1], s[2], s[3], cubierto]) : () => setState({ sheet: 'asignar' }),
+      onTap: cubierto ? () => abrirDetalle(hoyDiaMes, [s[0], s[1], s[2], s[3], cubierto]) : () => setState({ sheet: 'asignar' }),
     };
   });
 
@@ -190,12 +212,12 @@ export function useApp() {
   const dotacion = (() => {
     const { esHoy, total, vac, baja, conProt, libres, libranza } = dotacionSel;
     const pct = (n: number) => Math.round((n / total) * 100) + '%';
-    const dd = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][new Date(fechaDotF).getUTCDay()];
+    const dd = DIAS_LARGO[new Date(fechaDotF).getUTCDay()];
     const rango = fechaDotValida ? '' : ' (rango 2026–2030)';
     return {
       titulo: total + ' escoltas en plantilla',
       fechaTxt: !fechaDotValida ? 'Fecha no válida · mostrando hoy'
-        : esHoy ? 'Hoy · sábado 12 SEP'
+        : esHoy ? 'Hoy · ' + hoyLabel
         : dd + ' ' + fechaDotP[2] + ' ' + MESES[fechaDotP[1] - 1].slice(0, 3).toUpperCase(),
       filas: [
         { k: 'Con protegido', n: conProt.length, w: pct(conProt.length), color: color.accent700, barra: color.accent700, nota: 'Jornada asignada', onTap: () => setState({ sheet: 'dotacionDetalle', dotacionDetalleTipo: 'con' }) },
@@ -675,18 +697,27 @@ export function useApp() {
       // tocara el botón.
       const abierto = st.fichajes.find(f => f.escoltaNombre === MI_NOMBRE && !f.horaCierre);
       const cerrado = st.fichajes.find(f => f.escoltaNombre === MI_NOMBRE && f.horaCierre);
+      // Antes se asumía que "hoy" siempre era día de jornada. Ahora que HOY
+      // sigue la fecha real, hay que mirar el ciclo 14/7 de verdad — si hoy
+      // toca libranza no tiene sentido ofrecer "confirmar presencia".
+      const inicioMi = st.equipo.find(e => e.nombre === MI_NOMBRE)?.inicioJornada || '2026-01-01';
+      const hoyEsJornada = enJornada(HOY, inicioMi);
       return {
-        hora: st.horaSalidaHoy,
+        fecha: hoyEsJornada ? 'HOY · ' + hoyLabel : proximaJornadaDe(MI_NOMBRE).txt,
+        esLibranzaHoy: !hoyEsJornada,
+        hora: hoyEsJornada ? st.horaSalidaHoy : st.horaSalidaManana,
         cliente: 'Jornada con ' + (protDe(MI_NOMBRE) || suplenteDe(MI_NOMBRE) || { nombre: 'protegido por asignar' }).nombre,
         punto: 'Recogida en residencia · Pº de la Castellana 142. Fin de jornada al dejar al protegido en su domicilio.',
         cta: st.confirmado ? 'En puesto desde las ' + (abierto?.horaConfirmado || cerrado?.horaConfirmado || '') : 'Confirmar que estoy en puesto',
-        nota: st.cerrado
-          ? 'Jornada cerrada a las ' + st.cerrado + ' · protegido en su domicilio' + (cerrado?.duracion ? ' · ' + cerrado.duracion + ' registradas.' : '.')
-          : st.confirmado
-            ? 'En servicio. Cierra la jornada cuando dejes al protegido en su domicilio.'
-            : 'Asignación de coordinación. Confirma al llegar al punto de recogida.',
-        enServicio: st.confirmado && !st.cerrado,
-        cerrado: !!st.cerrado,
+        nota: !hoyEsJornada
+          ? 'Hoy es tu día de libranza dentro del ciclo 14/7.'
+          : st.cerrado
+            ? 'Jornada cerrada a las ' + st.cerrado + ' · protegido en su domicilio' + (cerrado?.duracion ? ' · ' + cerrado.duracion + ' registradas.' : '.')
+            : st.confirmado
+              ? 'En servicio. Cierra la jornada cuando dejes al protegido en su domicilio.'
+              : 'Asignación de coordinación. Confirma al llegar al punto de recogida.',
+        enServicio: hoyEsJornada && st.confirmado && !st.cerrado,
+        cerrado: hoyEsJornada && !!st.cerrado,
         ctaCierre: 'Protegido en su domicilio · cerrar jornada',
         metricas: [
           { v: '41 h', k: 'Esta semana' },
@@ -701,20 +732,9 @@ export function useApp() {
         ],
       };
     })(),
-    // Próximo día real de jornada según el ciclo 14/7, buscando desde
-    // mañana — para que al cerrar la jornada de hoy se pueda ver cuándo es
-    // la siguiente en vez de repetir la misma info de siempre.
-    proximaJornadaTxt: (() => {
-      const inicio = st.equipo.find(e => e.nombre === MI_NOMBRE)?.inicioJornada || '2026-01-01';
-      for (let i = 1; i <= 30; i++) {
-        const f = HOY + i * 86400000;
-        if (enJornada(f, inicio)) {
-          const dt = new Date(f);
-          return DIAS_CORTO[dt.getUTCDay()] + ' ' + dt.getUTCDate() + ' ' + MESES[dt.getUTCMonth()].slice(0, 3).toUpperCase();
-        }
-      }
-      return 'Sin datos de ciclo';
-    })(),
+    // Día real en que se cierra la jornada de hoy y se avisa la próxima —
+    // se muestra en la caja que aparece tras "cerrar jornada".
+    proximaJornadaTxt: proximaJornadaDe(MI_NOMBRE).txt,
     // Hora de salida de MAÑANA, distinta de horaSalidaHoy (usada en
     // mio.hora): el protegido la avisa por la tarde, al cerrar la jornada
     // de hoy, para el día siguiente — cambiarla no debe tocar la de hoy.
@@ -744,7 +764,7 @@ export function useApp() {
       }));
       flash('Jornada cerrada · ' + horaCierre + ' · ' + duracion);
     },
-    verDetalleJornada: () => setState({ sheet: 'detalle', detalle: { dia: 12, desde: '06:00', hasta: '20:00', protegido: 'Alberto Ferrán', tipo: 'Jornada fija · residencia, oficina y agenda', dotacion: 'M. Ríos · relevo I. Colmenar', telefono: st.protegidos.find(p => p.nombre === 'Alberto Ferrán')?.telefono } }),
+    verDetalleJornada: () => setState({ sheet: 'detalle', detalle: { dia: hoyDiaMes, desde: '06:00', hasta: '20:00', protegido: 'Alberto Ferrán', tipo: 'Jornada fija · residencia, oficina y agenda', dotacion: 'M. Ríos · relevo I. Colmenar', telefono: st.protegidos.find(p => p.nombre === 'Alberto Ferrán')?.telefono } }),
 
     // ---- Vacaciones (escolta) ----
     saldo: [
@@ -885,7 +905,7 @@ export function useApp() {
     guardarAsignacion: () => { setState({ sheet: null }); flash('Asignación actualizada · ' + protActualAsig.nombre); },
 
     // ---- Sheet: detalle de servicio ----
-    detalle: st.detalle || { protegido: '', desde: '', hasta: '', tipo: '', dotacion: '', dia: 12 },
+    detalle: st.detalle || { protegido: '', desde: '', hasta: '', tipo: '', dotacion: '', dia: hoyDiaMes },
     notificarDotacion: () => { setState({ sheet: null }); flash('Aviso enviado a la dotación'); },
     puedeEditarServicio: coord && !!st.detalle?.extraId,
     abrirEditarServicio: () => {
