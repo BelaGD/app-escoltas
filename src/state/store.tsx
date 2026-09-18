@@ -51,6 +51,7 @@ export interface Fichaje {
   escoltaNombre: string;
   protegido: string;
   horaConfirmado: string;
+  confirmadoTs: number;
   horaCierre: string | null;
   duracion: string | null;
 }

@@ -6,7 +6,7 @@ import {
 } from '../data/mock';
 import { color } from '../theme/theme';
 import { diaCiclo, enJornada } from './ciclo';
-import { dmyToLocalDate, localDateToIso, formatIsoShort, utcMsToIso, isoToUtcMs } from './date';
+import { dmyToLocalDate, localDateToIso, formatIsoShort, utcMsToIso, isoToUtcMs, localDateToHm } from './date';
 
 export type TagKind = 'accent' | 'outline' | 'neutral';
 
@@ -53,6 +53,7 @@ export function useApp() {
 
   const coord = st.rol === 'coord';
   const tab = st.tab;
+  const DIAS_CORTO = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
   const MI_NOMBRE = 'Marta Ríos';
   // El custodio solo ve su propia jornada en Agenda, sin selector de equipo.
   const calEscoltaEfectivo = coord ? st.calEscolta : MI_NOMBRE;
@@ -413,7 +414,6 @@ export function useApp() {
 
     // ---- Agenda ----
     ...(() => {
-      const DIAS_CORTO = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
       const inicioSemanaF = isoToUtcMs(st.calSemanaInicio);
       const diasSemana = Array.from({ length: 7 }, (_, i) => {
         const f = inicioSemanaF + i * 86400000;
@@ -668,47 +668,76 @@ export function useApp() {
         suplente: 'Suplente: ' + a.suplente,
       };
     })(),
-    mio: {
-      hora: '06:00',
-      cliente: 'Jornada con ' + (protDe('Marta Ríos') || suplenteDe('Marta Ríos') || { nombre: 'protegido por asignar' }).nombre,
-      punto: 'Recogida en residencia · Pº de la Castellana 142. Fin de jornada al dejar al protegido en su domicilio.',
-      cta: st.confirmado ? 'En puesto desde las 05:58' : 'Confirmar que estoy en puesto',
-      nota: st.cerrado
-        ? 'Jornada cerrada a las ' + st.cerrado + ' · protegido en su domicilio · 14 h 32 min registradas.'
-        : st.confirmado
-          ? 'En servicio. Cierra la jornada cuando dejes al protegido en su domicilio.'
-          : 'Asignación de coordinación. Confirma al llegar al punto de recogida.',
-      enServicio: st.confirmado && !st.cerrado,
-      cerrado: !!st.cerrado,
-      ctaCierre: 'Protegido en su domicilio · cerrar jornada',
-      metricas: [
-        { v: '41 h', k: 'Esta semana' },
-        { v: '14 h', k: 'Descanso previo' },
-        { v: '11', k: 'Días vacac.' },
-      ],
-      semana: [
-        { dia: 'Dom', horas: 'Desde 12:00', cliente: 'Almuerzo · finca de Toledo', tipo: 'Especial', bar: WARN },
-        { dia: 'Lun', horas: 'Libre', cliente: 'Descanso · cubre I. Colmenar', tipo: '—', bar: color.neutral300 },
-        { dia: 'Mar', horas: 'Desde 06:00', cliente: 'Jornada con A. Ferrán', tipo: 'Fija', bar: color.accent600 },
-        { dia: 'Mié', horas: 'Desde 08:00', cliente: 'Consejo de administración', tipo: 'Especial', bar: WARN },
-      ],
-    },
+    mio: (() => {
+      // El fichaje abierto (sin cierre) trae la hora real en que se confirmó
+      // presencia; el más reciente cerrado trae la duración real registrada.
+      // Antes eran siempre "05:58" / "14 h 32 min" sin importar cuándo se
+      // tocara el botón.
+      const abierto = st.fichajes.find(f => f.escoltaNombre === MI_NOMBRE && !f.horaCierre);
+      const cerrado = st.fichajes.find(f => f.escoltaNombre === MI_NOMBRE && f.horaCierre);
+      return {
+        hora: '06:00',
+        cliente: 'Jornada con ' + (protDe(MI_NOMBRE) || suplenteDe(MI_NOMBRE) || { nombre: 'protegido por asignar' }).nombre,
+        punto: 'Recogida en residencia · Pº de la Castellana 142. Fin de jornada al dejar al protegido en su domicilio.',
+        cta: st.confirmado ? 'En puesto desde las ' + (abierto?.horaConfirmado || cerrado?.horaConfirmado || '') : 'Confirmar que estoy en puesto',
+        nota: st.cerrado
+          ? 'Jornada cerrada a las ' + st.cerrado + ' · protegido en su domicilio' + (cerrado?.duracion ? ' · ' + cerrado.duracion + ' registradas.' : '.')
+          : st.confirmado
+            ? 'En servicio. Cierra la jornada cuando dejes al protegido en su domicilio.'
+            : 'Asignación de coordinación. Confirma al llegar al punto de recogida.',
+        enServicio: st.confirmado && !st.cerrado,
+        cerrado: !!st.cerrado,
+        ctaCierre: 'Protegido en su domicilio · cerrar jornada',
+        metricas: [
+          { v: '41 h', k: 'Esta semana' },
+          { v: '14 h', k: 'Descanso previo' },
+          { v: '11', k: 'Días vacac.' },
+        ],
+        semana: [
+          { dia: 'Dom', horas: 'Desde 12:00', cliente: 'Almuerzo · finca de Toledo', tipo: 'Especial', bar: WARN },
+          { dia: 'Lun', horas: 'Libre', cliente: 'Descanso · cubre I. Colmenar', tipo: '—', bar: color.neutral300 },
+          { dia: 'Mar', horas: 'Desde 06:00', cliente: 'Jornada con A. Ferrán', tipo: 'Fija', bar: color.accent600 },
+          { dia: 'Mié', horas: 'Desde 08:00', cliente: 'Consejo de administración', tipo: 'Especial', bar: WARN },
+        ],
+      };
+    })(),
+    // Próximo día real de jornada según el ciclo 14/7, buscando desde
+    // mañana — para que al cerrar la jornada de hoy se pueda ver cuándo es
+    // la siguiente en vez de repetir la misma info de siempre.
+    proximaJornadaTxt: (() => {
+      const inicio = st.equipo.find(e => e.nombre === MI_NOMBRE)?.inicioJornada || '2026-01-01';
+      for (let i = 1; i <= 30; i++) {
+        const f = HOY + i * 86400000;
+        if (enJornada(f, inicio)) {
+          const dt = new Date(f);
+          return DIAS_CORTO[dt.getUTCDay()] + ' ' + dt.getUTCDate() + ' ' + MESES[dt.getUTCMonth()].slice(0, 3).toUpperCase();
+        }
+      }
+      return 'Sin datos de ciclo';
+    })(),
     confirmar: () => {
-      const protegido = (protDe('Marta Ríos') || suplenteDe('Marta Ríos') || { nombre: 'protegido por asignar' }).nombre;
-      setState(s => ({ confirmado: true, fichajes: ([{ id: 'f' + Date.now(), escoltaNombre: 'Marta Ríos', protegido, horaConfirmado: '05:58', horaCierre: null, duracion: null }] as Fichaje[]).concat(s.fichajes) }));
-      flash('Presencia confirmada · 05:58 · ' + protegido);
+      const protegido = (protDe(MI_NOMBRE) || suplenteDe(MI_NOMBRE) || { nombre: 'protegido por asignar' }).nombre;
+      const hora = localDateToHm(new Date());
+      setState(s => ({ confirmado: true, fichajes: ([{ id: 'f' + Date.now(), escoltaNombre: MI_NOMBRE, protegido, horaConfirmado: hora, confirmadoTs: Date.now(), horaCierre: null, duracion: null }] as Fichaje[]).concat(s.fichajes) }));
+      flash('Presencia confirmada · ' + hora + ' · ' + protegido);
     },
     confirmarDetalle: () => {
-      const protegido = (protDe('Marta Ríos') || suplenteDe('Marta Ríos') || { nombre: 'protegido por asignar' }).nombre;
-      setState(s => ({ sheet: null, confirmado: true, fichajes: ([{ id: 'f' + Date.now(), escoltaNombre: 'Marta Ríos', protegido, horaConfirmado: '05:58', horaCierre: null, duracion: null }] as Fichaje[]).concat(s.fichajes) }));
-      flash('Presencia confirmada · 05:58 · ' + protegido);
+      const protegido = (protDe(MI_NOMBRE) || suplenteDe(MI_NOMBRE) || { nombre: 'protegido por asignar' }).nombre;
+      const hora = localDateToHm(new Date());
+      setState(s => ({ sheet: null, confirmado: true, fichajes: ([{ id: 'f' + Date.now(), escoltaNombre: MI_NOMBRE, protegido, horaConfirmado: hora, confirmadoTs: Date.now(), horaCierre: null, duracion: null }] as Fichaje[]).concat(s.fichajes) }));
+      flash('Presencia confirmada · ' + hora + ' · ' + protegido);
     },
     cerrarJornada: () => {
+      const ahora = new Date();
+      const horaCierre = localDateToHm(ahora);
+      const actual = st.fichajes.find(f => f.escoltaNombre === MI_NOMBRE && !f.horaCierre);
+      const ms = actual ? Math.max(0, ahora.getTime() - actual.confirmadoTs) : 0;
+      const duracion = Math.floor(ms / 3600000) + ' h ' + Math.round((ms % 3600000) / 60000) + ' min';
       setState(s => ({
-        cerrado: '20:30',
-        fichajes: s.fichajes.map((f, i) => i === 0 && f.escoltaNombre === 'Marta Ríos' && !f.horaCierre ? { ...f, horaCierre: '20:30', duracion: '14 h 32 min' } : f),
+        cerrado: horaCierre,
+        fichajes: actual ? s.fichajes.map(f => f.id === actual.id ? { ...f, horaCierre, duracion } : f) : s.fichajes,
       }));
-      flash('Jornada cerrada · 20:30 · 14 h 32 min');
+      flash('Jornada cerrada · ' + horaCierre + ' · ' + duracion);
     },
     verDetalleJornada: () => setState({ sheet: 'detalle', detalle: { dia: 12, desde: '06:00', hasta: '20:00', protegido: 'Alberto Ferrán', tipo: 'Jornada fija · residencia, oficina y agenda', dotacion: 'M. Ríos · relevo I. Colmenar', telefono: st.protegidos.find(p => p.nombre === 'Alberto Ferrán')?.telefono } }),
 

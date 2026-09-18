@@ -37,6 +37,13 @@ export function HoyEscolta() {
         )}
       </Blueprint>
 
+      {mio.cerrado && (
+        <View style={styles.proximaBox}>
+          <Text style={styles.kickerMuted}>Tu próxima jornada</Text>
+          <Text style={styles.proximaFecha}>{app.proximaJornadaTxt}</Text>
+        </View>
+      )}
+
       <View style={styles.metricRow}>
         {mio.metricas.map((m, i) => (
           <View key={i} style={styles.metric}>
@@ -71,6 +78,8 @@ const styles = StyleSheet.create({
   protRutina: { fontSize: 12, color: color.neutral700, marginTop: 8, fontFamily: font.body },
   protSuplente: { fontSize: 11, color: color.neutral600, marginTop: 3, fontFamily: font.body },
   jornadaBox: { padding: 14, marginBottom: 16 },
+  proximaBox: { borderWidth: 1, borderColor: color.neutral300, padding: 12, marginTop: -2, marginBottom: 16 },
+  proximaFecha: { fontFamily: font.heading, fontSize: 20, color: color.text, marginTop: 3 },
   kickerAccent: { fontFamily: font.heading, fontSize: 10.5, letterSpacing: 2, textTransform: 'uppercase', color: color.accent700 },
   hora: { fontFamily: font.heading, fontSize: 34, lineHeight: 36, color: color.text, marginTop: 6 },
   cliente: { fontSize: 15, fontWeight: '600', color: color.text, marginTop: 6, fontFamily: font.bodySemiBold },
