@@ -27,10 +27,14 @@ export function HoyEscolta() {
         <Text style={styles.punto}>{mio.punto}</Text>
         <Text style={styles.nota}>{mio.nota}</Text>
         {mio.enServicio && <Btn label={mio.ctaCierre} variant="primary" block onPress={app.cerrarJornada} />}
-        <View style={styles.ctaRow}>
-          <Btn label={mio.cta} variant="primary" onPress={app.confirmar} style={{ flex: 1 }} small />
-          <Btn label="Ver detalle" variant="secondary" onPress={app.verDetalleJornada} style={{ flex: 1 }} small />
-        </View>
+        {mio.cerrado ? (
+          <Btn label="Ver detalle" variant="secondary" onPress={app.verDetalleJornada} block small style={{ marginTop: 12 }} />
+        ) : (
+          <View style={styles.ctaRow}>
+            <Btn label={mio.cta} variant="primary" onPress={app.confirmar} style={{ flex: 1 }} small />
+            <Btn label="Ver detalle" variant="secondary" onPress={app.verDetalleJornada} style={{ flex: 1 }} small />
+          </View>
+        )}
       </Blueprint>
 
       <View style={styles.metricRow}>
