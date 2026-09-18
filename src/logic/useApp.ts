@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useStore, AppState, Patch, Fichaje } from '../state/store';
+import { useStore, AppState, Patch, Fichaje, HistorialEvento } from '../state/store';
 import {
   EST, SEMANA, MESES, DIA_SERV, EST_PROT,
   HOY, WARN, MUT, AC, Escolta, Protegido, ServicioRaw, MiSolicitud, Solicitud,
@@ -22,6 +22,16 @@ const corto = (nombre: string) => {
  */
 export function useApp() {
   const { state: st, setState, flash, toastUndo, deshacerToast } = useStore();
+
+  // Registro de auditoría: se llama junto a cada acción de seguridad
+  // relevante (fichajes, vacaciones, altas/bajas, asignaciones, servicios)
+  // para que coordinación tenga un historial completo, no solo el estado
+  // final. Por ahora vive en memoria — ver limitación de persistencia.
+  const registrarEvento = (tipo: HistorialEvento['tipo'], texto: string) => {
+    setState(s => ({
+      historial: ([{ id: 'h' + Date.now() + Math.random().toString(36).slice(2, 7), ts: Date.now(), tipo, texto }] as HistorialEvento[]).concat(s.historial),
+    }));
+  };
 
   const asigDe = (p: Protegido) => ({
     titular: st.asig[p.id]?.titular || p.titular,
@@ -115,6 +125,7 @@ export function useApp() {
     notif: ['Últimos 7 días', 'Avisos'],
     ajustes: ['Cuenta y avisos', 'Ajustes'],
     reporte: ['Para compartir', 'Reporte del día'],
+    historialGeneral: ['Registro de auditoría', 'Historial completo'],
   };
   const head = heads[tab] || heads.hoy;
   const noLeidas = st.notifs.filter(n => !n.leida).length;
@@ -161,11 +172,13 @@ export function useApp() {
   const txtEstado = (e: string) => e === 'aprobada' ? 'APROBADA' : e === 'rechazada' ? 'RECHAZADA' : 'PENDIENTE';
 
   const resolver = (id: string, estado: 'aprobada' | 'rechazada', nombre: string) => {
+    const rango = st.solicitudes.find(s => s.id === id)?.rango || '';
     setState(s => ({
       solicitudes: s.solicitudes.map(x => x.id === id ? { ...x, estado } : x),
       misSolicitudes: s.misSolicitudes.map(x => x.id === id ? { ...x, estado } : x),
       equipo: estado === 'aprobada' ? s.equipo.map(e => e.nombre === nombre ? { ...e, estado: 'vacaciones' } : e) : s.equipo,
     }));
+    registrarEvento('Vacaciones', (estado === 'aprobada' ? 'Aprobada · ' : 'Rechazada · ') + nombre + ' · ' + rango);
     flash(estado === 'aprobada' ? 'Vacaciones aprobadas · ' + nombre + ' pasa a vacaciones' : 'Solicitud rechazada · ' + nombre);
   };
 
@@ -315,6 +328,7 @@ export function useApp() {
       nuevoEscoltaNombre: '',
       equipo: s.equipo.concat([{ id: Date.now(), nombre, ini, estado: 'disponible', horas: 0, cli: '', certs: [], inicioJornada: s.nuevoEscoltaInicio }]),
     }));
+    registrarEvento('Equipo', 'Escolta añadido · ' + nombre);
     flash('Escolta añadido · ' + nombre);
   };
   const eliminarEscolta = (id: number) => {
@@ -324,6 +338,7 @@ export function useApp() {
     const asignado = protDe(e.nombre) || suplenteDe(e.nombre);
     if (asignado) { flash('No se puede eliminar: es titular o suplente de ' + asignado.nombre); return; }
     setState(s => ({ equipo: s.equipo.filter(x => x.id !== id), tab: 'equipo', fichaId: null }));
+    registrarEvento('Equipo', 'Escolta eliminado · ' + e.nombre);
     flash('Escolta eliminado · ' + e.nombre, () => setState(s => ({ equipo: s.equipo.concat([e]) })));
   };
 
@@ -343,6 +358,7 @@ export function useApp() {
         estado: 'con', telefono: n.telefono.trim(),
       }]),
     }));
+    registrarEvento('Protegidos', 'Protegido añadido · ' + n.nombre.trim());
     flash('Protegido añadido · ' + n.nombre.trim());
   };
   const eliminarProtegido = (id: string) => {
@@ -358,6 +374,7 @@ export function useApp() {
         asigProt: s.asigProt === id ? s.protegidos.filter(x => x.id !== id)[0].id : s.asigProt,
       };
     });
+    registrarEvento('Protegidos', 'Protegido eliminado · ' + p.nombre);
     flash('Protegido eliminado · ' + p.nombre, () => setState(s => ({
       protegidos: s.protegidos.concat([p]),
       asig: asigPrevia ? { ...s.asig, [id]: asigPrevia } : s.asig,
@@ -377,6 +394,7 @@ export function useApp() {
         ? { ...p, nombre: ep.nombre.trim(), codigo: ep.codigo.trim() || p.codigo, rol: ep.rol.trim(), nivel: ep.nivel, rutina: ep.rutina.trim(), telefono: ep.telefono.trim() }
         : p),
     }));
+    registrarEvento('Protegidos', 'Datos actualizados · ' + ep.nombre.trim());
     flash('Datos actualizados · ' + ep.nombre.trim());
   };
 
@@ -391,6 +409,7 @@ export function useApp() {
         ? { ...e, certs: e.certs.concat([{ id: 'c' + Date.now(), nombre: h.nombre.trim(), num: h.num.trim(), vence: h.vence.trim() || 'Sin fecha', alerta: h.alerta }]) }
         : e),
     }));
+    registrarEvento('Equipo', 'Habilitación añadida · ' + h.nombre.trim() + ' · ' + fichaEsc.nombre);
     flash('Habilitación añadida · ' + h.nombre.trim());
   };
   const eliminarHabilitacion = (certId: string) => {
@@ -399,6 +418,7 @@ export function useApp() {
     setState(s => ({
       equipo: s.equipo.map(e => e.id === escoltaId ? { ...e, certs: e.certs.filter(c => c.id !== certId) } : e),
     }));
+    registrarEvento('Equipo', 'Habilitación eliminada · ' + (cert?.nombre || '') + ' · ' + fichaEsc.nombre);
     flash('Habilitación eliminada', cert ? () => setState(s => ({
       equipo: s.equipo.map(e => e.id === escoltaId ? { ...e, certs: e.certs.concat([cert]) } : e),
     })) : undefined);
@@ -637,6 +657,7 @@ export function useApp() {
     finalizarVacaciones: () => {
       const id = fichaEsc.id;
       setState(s => ({ equipo: s.equipo.map(e => e.id === id ? { ...e, estado: 'disponible' } : e) }));
+      registrarEvento('Equipo', fichaEsc.nombre + ' vuelve de vacaciones');
       flash(fichaEsc.nombre + ' vuelve de vacaciones');
     },
     enBaja: fichaEsc.estado === 'baja',
@@ -656,11 +677,13 @@ export function useApp() {
         notifs: [{ id: notifId, tipo: 'Cobertura', texto: textoAviso, hora: 'ahora', leida: false, urgente: !!titularDe }].concat(s.notifs),
         ...(titularDe ? { tab: 'prot' as const, sheet: 'asignacion' as const, asigProt: titularDe.id } : {}),
       }));
+      registrarEvento('Equipo', 'Baja registrada · ' + nombre);
       flash(titularDe ? 'Baja registrada · elige reemplazo para ' + titularDe.nombre : 'Baja registrada · ' + nombre);
     },
     volverDeBaja: () => {
       const id = fichaEsc.id;
       setState(s => ({ equipo: s.equipo.map(e => e.id === id ? { ...e, estado: 'disponible' } : e) }));
+      registrarEvento('Equipo', fichaEsc.nombre + ' se reincorpora');
       flash(fichaEsc.nombre + ' se reincorpora');
     },
     volverEquipo: () => setState({ tab: 'equipo', sheet: null }),
@@ -676,6 +699,7 @@ export function useApp() {
       const id = fichaEsc.id;
       const fecha = st.editarJornadaFecha;
       setState(s => ({ sheet: null, equipo: s.equipo.map(e => e.id === id ? { ...e, inicioJornada: fecha } : e) }));
+      registrarEvento('Equipo', 'Ciclo 14/7 actualizado · ' + fichaEsc.nombre + ' · inicio ' + fecha);
       flash('Ciclo 14/7 actualizado · ' + fichaEsc.nombre);
     },
 
@@ -744,12 +768,14 @@ export function useApp() {
       const protegido = (protDe(MI_NOMBRE) || suplenteDe(MI_NOMBRE) || { nombre: 'protegido por asignar' }).nombre;
       const hora = localDateToHm(new Date());
       setState(s => ({ confirmado: true, fichajes: ([{ id: 'f' + Date.now(), escoltaNombre: MI_NOMBRE, protegido, horaConfirmado: hora, confirmadoTs: Date.now(), horaCierre: null, duracion: null }] as Fichaje[]).concat(s.fichajes) }));
+      registrarEvento('Fichaje', 'Presencia confirmada · ' + hora + ' · ' + MI_NOMBRE + ' · ' + protegido);
       flash('Presencia confirmada · ' + hora + ' · ' + protegido);
     },
     confirmarDetalle: () => {
       const protegido = (protDe(MI_NOMBRE) || suplenteDe(MI_NOMBRE) || { nombre: 'protegido por asignar' }).nombre;
       const hora = localDateToHm(new Date());
       setState(s => ({ sheet: null, confirmado: true, fichajes: ([{ id: 'f' + Date.now(), escoltaNombre: MI_NOMBRE, protegido, horaConfirmado: hora, confirmadoTs: Date.now(), horaCierre: null, duracion: null }] as Fichaje[]).concat(s.fichajes) }));
+      registrarEvento('Fichaje', 'Presencia confirmada · ' + hora + ' · ' + MI_NOMBRE + ' · ' + protegido);
       flash('Presencia confirmada · ' + hora + ' · ' + protegido);
     },
     cerrarJornada: () => {
@@ -762,6 +788,7 @@ export function useApp() {
         cerrado: horaCierre,
         fichajes: actual ? s.fichajes.map(f => f.id === actual.id ? { ...f, horaCierre, duracion } : f) : s.fichajes,
       }));
+      registrarEvento('Fichaje', 'Jornada cerrada · ' + horaCierre + ' · ' + MI_NOMBRE + ' · ' + duracion);
       flash('Jornada cerrada · ' + horaCierre + ' · ' + duracion);
     },
     verDetalleJornada: () => setState({ sheet: 'detalle', detalle: { dia: hoyDiaMes, desde: '06:00', hasta: '20:00', protegido: 'Alberto Ferrán', tipo: 'Jornada fija · residencia, oficina y agenda', dotacion: 'M. Ríos · relevo I. Colmenar', telefono: st.protegidos.find(p => p.nombre === 'Alberto Ferrán')?.telefono } }),
@@ -805,6 +832,7 @@ export function useApp() {
         solicitudes: ([{ id, nombre: 'Marta Ríos', rango, desde: desdeIso, hasta: hastaIso, dias: '5 días laborables', aviso: '', warn: false, estado: 'pendiente' }] as Solicitud[])
           .concat(s.solicitudes),
       }));
+      registrarEvento('Vacaciones', 'Solicitud enviada · ' + MI_NOMBRE + ' · ' + rango);
       flash('Solicitud enviada a coordinación');
     },
 
@@ -902,7 +930,11 @@ export function useApp() {
     asigDesde: st.asigDesde,
     setAsigDesde: (v: string) => setState({ asigDesde: v }),
     asigResumen: asigActual.titular + ' como titular · ' + asigActual.suplente + ' de suplente, desde el ' + st.asigDesde,
-    guardarAsignacion: () => { setState({ sheet: null }); flash('Asignación actualizada · ' + protActualAsig.nombre); },
+    guardarAsignacion: () => {
+      setState({ sheet: null });
+      registrarEvento('Protegidos', 'Asignación actualizada · ' + protActualAsig.nombre + ' · titular ' + asigActual.titular + ' / suplente ' + asigActual.suplente);
+      flash('Asignación actualizada · ' + protActualAsig.nombre);
+    },
 
     // ---- Sheet: detalle de servicio ----
     detalle: st.detalle || { protegido: '', desde: '', hasta: '', tipo: '', dotacion: '', dia: hoyDiaMes },
@@ -920,6 +952,7 @@ export function useApp() {
     cancelarServicio: () => {
       const d = st.detalle!;
       setState(s => ({ sheet: null, cancelados: s.cancelados.concat([d.dia + '|' + d.desde + '|' + d.protegido]) }));
+      registrarEvento('Servicios', 'Servicio cancelado · ' + d.protegido + ' · día ' + d.dia + ' · ' + d.desde);
       flash('Servicio cancelado · ' + d.protegido);
     },
 
@@ -954,12 +987,14 @@ export function useApp() {
             ? { ...e, dia: n.dia, desde: n.desde, protegido: n.protegido, tipo: n.tipo, lugar: n.lugar || 'Lugar por confirmar', dotacion: n.dotacion.join(' · ') }
             : e),
         }));
+        registrarEvento('Servicios', 'Servicio actualizado · ' + n.protegido + ' · día ' + n.dia);
         flash('Servicio actualizado · ' + n.protegido);
       } else {
         setState(s => ({
           sheet: null,
           extra: s.extra.concat([{ id: 's' + Date.now(), dia: n.dia, desde: n.desde, hasta: '', protegido: n.protegido, tipo: n.tipo, lugar: n.lugar || 'Lugar por confirmar', dotacion: n.dotacion.join(' · ') }]),
         }));
+        registrarEvento('Servicios', 'Servicio especial creado · ' + n.protegido + ' · día ' + n.dia);
         flash('Servicio especial creado · ' + n.protegido);
       }
     },
@@ -993,6 +1028,16 @@ export function useApp() {
       { k: 'Rol', v: coord ? 'Coordinación' : 'Escolta' },
     ],
     cerrarSesion: () => setState({ sesion: false, authView: 'login', tab: 'hoy', pass: '', authError: '' }),
+    abrirHistorialGeneral: () => setState({ tab: 'historialGeneral' }),
+    // Registro completo de auditoría — todo lo que tocó registrarEvento,
+    // más reciente primero, con fecha y hora reales de cuando ocurrió.
+    historialGeneral: st.historial.map(h => {
+      const dt = new Date(h.ts);
+      return {
+        id: h.id, tipo: h.tipo, texto: h.texto,
+        cuando: DIAS_CORTO[dt.getDay()] + ' ' + dt.getDate() + ' ' + MESES[dt.getMonth()].slice(0, 3).toUpperCase() + ' · ' + localDateToHm(dt),
+      };
+    }),
 
     // ---- Bottom sheet chrome ----
     sheet: st.sheet,

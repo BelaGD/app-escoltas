@@ -20,7 +20,7 @@ const lunesDeEstaSemana = new Date(hoyReal);
 lunesDeEstaSemana.setDate(hoyReal.getDate() - ((hoyReal.getDay() + 6) % 7));
 
 export type Rol = 'coord' | 'escolta';
-export type Tab = 'hoy' | 'cal' | 'vac' | 'prot' | 'equipo' | 'perfil' | 'ficha' | 'notif' | 'ajustes' | 'reporte';
+export type Tab = 'hoy' | 'cal' | 'vac' | 'prot' | 'equipo' | 'perfil' | 'ficha' | 'notif' | 'ajustes' | 'reporte' | 'historialGeneral';
 export type Sheet = 'asignar' | 'nuevo' | 'asignacion' | 'detalle' | 'solicitud' | 'historial' | 'nuevoEscolta' | 'nuevoProtegido' | 'nuevaHabilitacion' | 'editarProtegido' | 'dotacionDetalle' | 'editarJornada' | null;
 export type DotacionDetalleTipo = 'con' | 'libres' | 'libranza' | 'vac' | 'baja';
 export type AuthView = 'login' | 'recuperar';
@@ -61,6 +61,17 @@ export interface Fichaje {
   confirmadoTs: number;
   horaCierre: string | null;
   duracion: string | null;
+}
+
+// Registro de auditoría: toda acción relevante de seguridad (fichajes,
+// vacaciones, altas/bajas, asignaciones, servicios) queda anotada acá para
+// que coordinación pueda consultar el historial completo. Vive solo en
+// memoria por ahora — se pierde al cerrar la app (persistencia pendiente).
+export interface HistorialEvento {
+  id: string;
+  ts: number;
+  tipo: 'Fichaje' | 'Vacaciones' | 'Equipo' | 'Protegidos' | 'Servicios';
+  texto: string;
 }
 
 export interface NuevoServicio {
@@ -123,6 +134,7 @@ export interface AppState {
   prefs: { servicio: boolean; vacaciones: boolean; silencio: boolean };
   notifs: Notif[];
   fichajes: Fichaje[];
+  historial: HistorialEvento[];
 }
 
 export const initialState: AppState = {
@@ -175,6 +187,7 @@ export const initialState: AppState = {
   prefs: { servicio: true, vacaciones: true, silencio: false },
   notifs: NOTIFS_INICIALES,
   fichajes: [],
+  historial: [],
 };
 
 export type Patch = Partial<AppState> | ((s: AppState) => Partial<AppState>);

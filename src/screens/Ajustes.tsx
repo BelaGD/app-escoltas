@@ -44,6 +44,13 @@ export function Ajustes() {
         ))}
       </View>
 
+      {app.coord && (
+        <>
+          <SectionTitle>Seguridad</SectionTitle>
+          <Btn label="Ver historial completo" variant="secondary" block onPress={app.abrirHistorialGeneral} style={{ marginBottom: 16 }} />
+        </>
+      )}
+
       <Btn label="Cerrar sesión" variant="secondary" block onPress={app.cerrarSesion} />
       <Text style={styles.version}>Relevo 2.4.1 · build 2026.09</Text>
     </View>
