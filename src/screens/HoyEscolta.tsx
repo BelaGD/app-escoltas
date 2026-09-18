@@ -1,14 +1,26 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { Pencil } from 'lucide-react-native';
 import { color, font } from '../theme/theme';
 import { Blueprint } from '../components/ui/Blueprint';
 import { Btn } from '../components/ui/Button';
 import { SectionTitle } from '../components/ui/Section';
+import { hmToLocalDate, localDateToHm } from '../logic/date';
 import { useApp } from '../logic/useApp';
 
 export function HoyEscolta() {
   const app = useApp();
   const { miProtegido: mp, mio } = app;
+
+  const editarHora = () => {
+    DateTimePickerAndroid.open({
+      value: hmToLocalDate(app.horaSalidaManana),
+      mode: 'time',
+      is24Hour: true,
+      onValueChange: (_e, selected) => selected && app.setHoraSalidaManana(localDateToHm(selected)),
+    });
+  };
 
   return (
     <View>
@@ -22,7 +34,11 @@ export function HoyEscolta() {
 
       <Blueprint style={styles.jornadaBox} borderColor={color.accent600}>
         <Text style={styles.kickerAccent}>Tu próxima jornada</Text>
-        <Text style={styles.hora}>{mio.hora}</Text>
+        <Pressable style={styles.horaRow} onPress={editarHora} hitSlop={8}>
+          <Text style={styles.hora}>{mio.hora}</Text>
+          <Pencil size={16} strokeWidth={1.5} color={color.accent700} />
+        </Pressable>
+        <Text style={styles.horaHint}>Hora avisada por el protegido · toca para cambiarla</Text>
         <Text style={styles.cliente}>{mio.cliente}</Text>
         <Text style={styles.punto}>{mio.punto}</Text>
         <Text style={styles.nota}>{mio.nota}</Text>
@@ -40,7 +56,8 @@ export function HoyEscolta() {
       {mio.cerrado && (
         <View style={styles.proximaBox}>
           <Text style={styles.kickerMuted}>Tu próxima jornada</Text>
-          <Text style={styles.proximaFecha}>{app.proximaJornadaTxt}</Text>
+          <Text style={styles.proximaFecha}>{app.proximaJornadaTxt} · {app.horaSalidaManana}</Text>
+          <Btn label="Cambiar hora de salida" variant="secondary" onPress={editarHora} small style={{ marginTop: 8, alignSelf: 'flex-start' }} />
         </View>
       )}
 
@@ -81,7 +98,9 @@ const styles = StyleSheet.create({
   proximaBox: { borderWidth: 1, borderColor: color.neutral300, padding: 12, marginTop: -2, marginBottom: 16 },
   proximaFecha: { fontFamily: font.heading, fontSize: 20, color: color.text, marginTop: 3 },
   kickerAccent: { fontFamily: font.heading, fontSize: 10.5, letterSpacing: 2, textTransform: 'uppercase', color: color.accent700 },
-  hora: { fontFamily: font.heading, fontSize: 34, lineHeight: 36, color: color.text, marginTop: 6 },
+  horaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, alignSelf: 'flex-start' },
+  hora: { fontFamily: font.heading, fontSize: 34, lineHeight: 36, color: color.text },
+  horaHint: { fontSize: 10.5, color: color.neutral600, fontFamily: font.body, marginTop: 2 },
   cliente: { fontSize: 15, fontWeight: '600', color: color.text, marginTop: 6, fontFamily: font.bodySemiBold },
   punto: { fontSize: 12.5, color: color.neutral700, marginTop: 3, fontFamily: font.body },
   nota: { fontSize: 11.5, color: color.neutral600, marginTop: 6, fontFamily: font.body },
